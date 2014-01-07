@@ -8,8 +8,6 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".DrinViewerActivity" >
 
-        <!-- android:layout_marginTop="?android:attr/actionBarSize" -->
-
     <fragment
         android:id="@+id/serverlistfragment"
         android:layout_width="match_parent"
@@ -18,14 +16,6 @@
         android:layout_alignParentTop="true"
         class="com.drinviewer.droiddrinviewer.ServerListFragment"
         tools:layout="@layout/serverlist" >
-</fragment>
- <!--    
-    <ListView
-        android:id="@+id/serverListView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true" >
-    </ListView>
- -->
+    </fragment>
+
 </RelativeLayout>

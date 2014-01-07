@@ -4,7 +4,7 @@
     android:layout_height="?android:attr/listPreferredItemHeight"
     android:layout_marginLeft="5dp"
     android:layout_marginRight="5dp"
-    android:padding="2dip" >
+    android:padding="2dp" >
 
     <ImageView
         android:id="@+id/iconPaired"
@@ -24,7 +24,7 @@
         android:layout_toRightOf="@id/iconPaired"
         android:ellipsize="marquee"
         android:singleLine="true"
-        android:textSize="12sp" />
+        android:textSize="14sp" />
 
     <TextView
         android:id="@+id/serverNameLine"
@@ -36,6 +36,6 @@
         android:layout_alignWithParentIfMissing="true"
         android:layout_toRightOf="@id/iconPaired"
         android:gravity="center_vertical"
-        android:textSize="16sp" />
+        android:textSize="18sp" />
 
 </RelativeLayout> 

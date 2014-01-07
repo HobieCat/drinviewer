@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Drinviewer : DrinViewer is a free software to let you receive notifications on your desktop when your android device is ringing" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Drinviewer</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/HobieCat/drinviewer">View on GitHub</a>
+
+          <h1 id="project_title">Drinviewer</h1>
+          <h2 id="project_tagline">DrinViewer is a free software to let you receive notifications on your desktop when your android device is ringing</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/HobieCat/drinviewer/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/HobieCat/drinviewer/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a name="drinviewer" class="anchor" href="#drinviewer"><span class="octicon octicon-link"></span></a>DrinViewer</h1>
+
+<p>DrinViewer is a free software to let you receive notifications on your desktop when your android device is ringing.
+It is designed to be as lightweight and fast as possible, goal is: install one app in your desktop OS (be it Linux, Mac or Windows) and one in your Android device (OS version 2.3.3 and up) pair the devices and as long as you have them connected to the same WiFi network you'll receive a popup notification on your desktop showing caller's name, phone and picture whenever you receive an incoming call.
+That's it for time being.</p>
+
+<p>The project is structured in two main parts: </p>
+
+<ul>
+<li>a desktop Java application that is responsible of listening to any incoming connection and keep an SQLite database on your pc with the list of paired device.</li>
+<li>an Android app responsible of scanning for listening PCs, sending them a pairing request, and sending the needed data to build up the popup notification to the paired PCs. Note that these data will <strong>not</strong> be sent to anybody else and that the Android device does <strong>not</strong> store any persistent data by any means.</li>
+</ul><hr><h2>
+<a name="directories-and-projects-structure" class="anchor" href="#directories-and-projects-structure"><span class="octicon octicon-link"></span></a>Directories and Projects Structure</h2>
+
+<p>Each directory of the repository contains an Eclipse project that you can import into your workspace or where you feel more comfortable.</p>
+
+<p>Directories and their contents:</p>
+
+<ol>
+<li>
+<strong><code>CommonDrinViewer</code></strong> contains the Eclipse project with the common Java classes used by the desktop and Android apps.</li>
+<li>
+<strong><code>DesktopDrinViewer</code></strong> contains the Eclipse project with the needed Java classes for the Desktop application. SWT Library (<a href="http://www.eclipse.org/swt/">http://www.eclipse.org/swt/</a>), SQLite-jdbc (<a href="https://bitbucket.org/xerial/sqlite-jdbc">https://bitbucket.org/xerial/sqlite-jdbc</a>) and SWTJar (<a href="http://mchr3k.github.io/swtjar/">http://mchr3k.github.io/swtjar/</a>) for easy SWT multiplatform deployment are included in the lib folder.</li>
+<li>
+<strong><code>DroidDrinViewer</code></strong> contains the Eclipse project with the needed Java classes for the Android app. android-support-v4.jar for backward Android OS support is included in libs folder for convenience.</li>
+</ol><hr><h2>
+<a name="notices" class="anchor" href="#notices"><span class="octicon octicon-link"></span></a>Notices</h2>
+
+<p>DrinViewer is still under heavy developement, the source code is just a skeleton for further imporvements but still usable.</p>
+
+<p>You'll always have the source code: I'm not asking to trust me, but look at the source to realize that nothing evil will be done with your precious contact informations. Every permission asked to the Android device is strictly related to the implementation.</p>
+
+<p>No binaries are provided for time being, but you can clone the repository and compile it yourself.</p>
+
+<hr><p>DrinViewer is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Drinviewer maintained by <a href="https://github.com/HobieCat">HobieCat</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>

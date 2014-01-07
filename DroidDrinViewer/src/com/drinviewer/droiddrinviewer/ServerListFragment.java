@@ -119,10 +119,9 @@ public class ServerListFragment extends Fragment {
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
 		if (discoverServer == null) {
-			// Instantiate the discoverServer class, passing the list of servers
-			// to be populated
+			// Instantiate the discoverServer class, passing the list of servers to be populated
 			discoverServer = new DiscoverServer(hostCollection, ((DrinViewerActivity) getActivity()).getMessageHandler());
-			discoverServer.setUUID("thisisatestUUID");
+			discoverServer.setUUID( DrinViewerApplication.getInstallationUUID() );
 			doDiscover(true);
 		}		
 	}
@@ -179,8 +178,7 @@ public class ServerListFragment extends Fragment {
 			HostData toPair = hostCollection.get(position);
 			if (toPair != null) {
 				ClientConnectionManager pm = new ClientConnectionManager(toPair);
-				// TODO: in real life this is going to be a real device UUID
-				pm.setUUID("thisisatestUUID");
+				pm.setUUID(DrinViewerApplication.getInstallationUUID());
 				new PairProtocolTask(((DrinViewerActivity) getActivity()).getMessageHandler(), position).execute(pm);
 				pm = null;
 			}

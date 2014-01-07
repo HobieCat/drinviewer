@@ -10,23 +10,27 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
      -->
+     
+    <ListView
+        android:id="@+id/serverListView"
+        android:layout_width="match_parent"
+        android:layout_height="fill_parent"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:divider="?android:attr/listDivider"
+        android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin" >
+    </ListView>
 
     <ProgressBar
         android:id="@+id/discoverServerProgress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="fill_parent"
-        android:layout_height="4dp"
+        android:layout_height="8dp"
+        android:layout_alignBottom="@id/serverListView"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
         android:indeterminate="true"
         android:visibility="gone" />
-
-    <ListView
-        android:id="@+id/serverListView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true"
-        android:paddingLeft="@dimen/activity_horizontal_margin"
-    	android:paddingRight="@dimen/activity_horizontal_margin" >
-    </ListView>
 
 </RelativeLayout>

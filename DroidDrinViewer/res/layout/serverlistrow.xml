@@ -4,7 +4,6 @@
     android:layout_height="?android:attr/listPreferredItemHeight"
     android:layout_marginLeft="5dp"
     android:layout_marginRight="5dp"
-    android:background="@drawable/border"
     android:padding="2dip" >
 
     <ImageView

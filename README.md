@@ -18,7 +18,7 @@ Each directory of the repository contains an Eclipse project that you can import
 Directories and their contents:
 
 1. **`CommonDrinViewer`** contains the Eclipse project with the common Java classes used by the desktop and Android apps.
-2. **`DesktopDrinViewer`** contains the Eclipse project with the needed Java classes for the Desktop application. SWT Library (http://www.eclipse.org/swt/), SQLite-jdbc (https://bitbucket.org/xerial/sqlite-jdbc) and SWTJar (http://mchr3k.github.io/swtjar/) for easy SWT multiplatform deployment are include in the lib folder.
+2. **`DesktopDrinViewer`** contains the Eclipse project with the needed Java classes for the Desktop application. SWT Library (http://www.eclipse.org/swt/), SQLite-jdbc (https://bitbucket.org/xerial/sqlite-jdbc) and SWTJar (http://mchr3k.github.io/swtjar/) for easy SWT multiplatform deployment are included in the lib folder.
 3. **`DroidDrinViewer`** contains the Eclipse project with the needed Java classes for the Android app. android-support-v4.jar for backward Android OS support is included in libs folder for convenience.
 
 **********************

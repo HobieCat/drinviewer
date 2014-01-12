@@ -53,9 +53,12 @@ public class DrinHostAdapter extends BaseAdapter {
 
 	public DrinHostAdapter(Context context, DrinHostCollection hostCollection) {
 		this.context = context;
-		this.hostCollection = hostCollection;
+		setHostCollection(hostCollection);
 	}
 
+	/**
+	 * Gets the HostAdapter view
+	 */
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -75,11 +78,25 @@ public class DrinHostAdapter extends BaseAdapter {
 		return rowView;		
 	}
 	
+	/**
+	 * Sets the DrinHostCollection to be displayed
+	 * @param c the collection to be displayed
+	 */
+	public void setHostCollection (DrinHostCollection c) {
+		this.hostCollection = c;
+	}
+	
+	/**
+	 * Counts the item in the collection
+	 */
 	@Override
 	public int getCount() {
 		return hostCollection.size();
 	}
 
+	/**
+	 * Gets the item in the collection at the passed position
+	 */
 	@Override
 	public HostData getItem(int position) {
 		return hostCollection.get(position);

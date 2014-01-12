@@ -20,8 +20,14 @@
 package com.drinviewer.droiddrinviewer;
 
 import com.drinviewer.common.HostData;
+import com.drinviewer.droiddrinviewer.DiscoverServerService.DiscoverServerBinder;
 
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,6 +35,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 
 /**
@@ -38,7 +45,7 @@ import android.widget.AdapterView.OnItemClickListener;
  * @author giorgio
  *
  */
-public class ServerListFragment extends Fragment {
+public class ServerListFragment extends Fragment implements ServiceConnection {
 
 	/**
 	 * The DrinHostAdapter to display the list
@@ -53,13 +60,6 @@ public class ServerListFragment extends Fragment {
 	 * @var DrinHostCollection
 	 */
 	private DrinHostCollection hostCollection;
-	
-	/**
-	 * The Runnable to execute when discoverying hosts
-	 * 
-	 * @var DiscoverServer
-	 */
-	private DiscoverServer discoverServer;
 	
 	/**
 	 * ProgressBar to be shown when updating the UI
@@ -78,6 +78,11 @@ public class ServerListFragment extends Fragment {
 	 */
 	private Integer discoverServerVisibility;
 	
+	/**
+	 * The DiscoverServerService
+	 */
+	private DiscoverServerService discoverServerService;
+	
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		// Inflate the view
@@ -89,13 +94,22 @@ public class ServerListFragment extends Fragment {
 		// Set visibility is its value was retained
 		if (discoverServerVisibility!=null) discoverServerProgress.setVisibility(discoverServerVisibility);
 
+		// If there is a discoverServerService holding a non null hostCollection
+		// use that one as our hostCollection, should be more updated than the retained one
+		if (discoverServerService!=null) {
+			DrinHostCollection tmp = discoverServerService.getHostCollection();
+			if (tmp!=null) hostCollection = tmp;
+		}
+				
 		// If the collection is not null, it was retained by setRetainInstance call
+		// so we don't build a new one here but use the retained one instead
 		if (hostCollection==null) {
 			// Instantiate the collection to be passed to the producer and list adapter			
 			hostCollection = new DrinHostCollection();
-			// Instantiate the list adapter
-			adapter = new DrinHostAdapter(view.getContext(), hostCollection);
 		}
+		
+		// Instantiate the list adapter		
+		adapter = new DrinHostAdapter(view.getContext(), hostCollection);
 		
 		// set the list adapter and the OnItemClickListener
 		serverListView.setAdapter(adapter);
@@ -106,7 +120,7 @@ public class ServerListFragment extends Fragment {
 				doPairingToggle(position);
 			}
 		});
-		// Sets fragment to be reained		
+		// Sets fragment to be retained		
 		setRetainInstance(true);
 		return view;
 	}
@@ -118,12 +132,28 @@ public class ServerListFragment extends Fragment {
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
-		if (discoverServer == null) {
-			// Instantiate the discoverServer class, passing the list of servers to be populated
-			discoverServer = new DiscoverServer(hostCollection, ((DrinViewerActivity) getActivity()).getMessageHandler());
-			discoverServer.setUUID( DrinViewerApplication.getInstallationUUID() );
-			doDiscover(true);
-		}		
+		// binds DiscoverServerService to this
+		getActivity().getApplication().bindService(new Intent(getActivity(),DiscoverServerService.class), this, Context.BIND_AUTO_CREATE);		
+	}
+	
+	/**
+	 * onResume Fragment method
+	 */
+	@Override
+	public void onResume() {
+		super.onResume();
+		/*
+		 * If the service has a hostCollection ready
+		 * use that one that is the most up-to-date
+		 */
+		if (discoverServerService!=null) {
+			DrinHostCollection newCollection = discoverServerService.getHostCollection();
+			if (newCollection != null) {
+				hostCollection = newCollection;
+				getAdapter().setHostCollection(hostCollection);
+				getAdapter().notifyDataSetChanged();
+			}
+		}
 	}
 
 	/**
@@ -153,9 +183,11 @@ public class ServerListFragment extends Fragment {
 	 * @param updateUI true if the UI must be updated while discovering
 	 */
 	public void doDiscover(boolean updateUI) {
-		hostCollection.init();
-		discoverServer.setSendUpdateUIMessage(updateUI);
-		new Thread(discoverServer).start();
+		if (updateUI && discoverServerService != null) {
+			discoverServerService.forceUpdateWithUIMessage(((DrinViewerActivity) getActivity()).getMessageHandler(),hostCollection);
+		} else if (discoverServerService == null) {
+			Toast.makeText(((DrinViewerActivity) getActivity()).getBaseContext(),"Error: Discovery Service not running", Toast.LENGTH_SHORT).show();
+		}
 	}
 	
 	/**
@@ -185,5 +217,25 @@ public class ServerListFragment extends Fragment {
 			toPair = null;
 		} else
 			System.err.println("Position "+position + " is invalid");
+	}
+	
+	/**
+	 * Disconnection to the DiscoverServerService
+	 * Method that implements the ServiceConnection
+	 */
+	@Override
+	public void onServiceDisconnected(ComponentName name) {
+		discoverServerService = null;
+	}
+
+	/**
+	 * Connection to the DiscoverServerService
+	 * Method that implements the ServiceConnection
+	 */
+	@Override
+	public void onServiceConnected(ComponentName name, IBinder service) {
+		discoverServerService = ((DiscoverServerBinder) service).getService();
+		// Runs a discovery with update to the UI
+		doDiscover(true);
 	}
 }

@@ -36,4 +36,7 @@ public class DroidDrinViewerConstants extends Constants {
 	public static final int    MSG_DISCOVER_DONE = 668;
 	// Toggle pairing message sent to the app handler	
 	public static final int    MSG_SERVER_TOGGLEPAIRED = 669;
+	
+	// restart discover service every 10 minutes
+	public static final long   DISCOVER_REPEAT_TIME = 1000 * 10 * 60;
 }

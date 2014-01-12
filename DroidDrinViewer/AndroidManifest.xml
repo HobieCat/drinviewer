@@ -7,8 +7,13 @@
     <uses-sdk
         android:minSdkVersion="9"
         android:targetSdkVersion="18" />
-    <uses-permission android:name="android.permission.INTERNET"/>
-
+    <uses-permission android:name="android.permission.INTERNET" />
+     
+    <!--
+    <uses-permission android:name="android.permission.WAKE_LOCK" /> 
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    -->
     <application
         android:name="com.drinviewer.droiddrinviewer.DrinViewerApplication"
         android:allowBackup="true"
@@ -20,10 +25,25 @@
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <receiver android:name="com.drinviewer.droiddrinviewer.DrinViewerBroadcastReceiver" 
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+        		<action android:name="android.net.wifi.STATE_CHANGE"/>
+        		<action android:name="@string/broadcast_startdiscovery"/>
+        		<action android:name="@string/broadcast_cleanhostcollection"/>
+            </intent-filter>
+		</receiver>
+				
+        <service 
+            android:name="com.drinviewer.droiddrinviewer.DiscoverServerService"
+            android:icon="@drawable/ic_launcher"
+            android:label="@string/discover_server_servicename">   
+        </service>
+		        
     </application>
-
 </manifest>

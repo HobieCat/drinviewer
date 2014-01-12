@@ -3,5 +3,8 @@
 
     <string name="app_name">DroidDrinViewer</string>
     <string name="refresh">Refresh List</string>
+    <string name="discover_server_servicename">DrinViewer Discovery Service</string>
+    <string name="broadcast_startdiscovery">com.drinviewer.droiddrinviewer.startdiscovery</string>
+    <string name="broadcast_cleanhostcollection">com.drinviewer.droiddrinviewer.cleanhostcollection</string>
 
 </resources>

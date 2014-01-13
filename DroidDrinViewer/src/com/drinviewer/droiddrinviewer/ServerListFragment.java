@@ -133,7 +133,7 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
 		// binds DiscoverServerService to this
-		getActivity().getApplication().bindService(new Intent(getActivity(),DiscoverServerService.class), this, Context.BIND_AUTO_CREATE);		
+		getActivity().getApplication().bindService(new Intent(getActivity(),DiscoverServerService.class), this, Context.BIND_AUTO_CREATE);
 	}
 	
 	/**
@@ -154,6 +154,21 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 				getAdapter().notifyDataSetChanged();
 			}
 		}
+	}
+	
+	/**
+	 * onDestroy Fragment method
+	 */
+	@Override
+	public void onDestroy() {
+		// TODO Auto-generated method stub
+		super.onDestroy();
+		// sends a message to the DrinViewerBroadcastReceiver to stop the discovery repeat
+		Intent i = new Intent(((DrinViewerActivity) getActivity()).getBaseContext(),DrinViewerBroadcastReceiver.class);
+		i.setAction(getResources().getString(R.string.broadcast_stopalarmrepeater));
+		((DrinViewerActivity) getActivity()).getBaseContext().sendBroadcast(i);
+		// unbinds the DiscoverServerService
+		getActivity().getApplication().unbindService(this);
 	}
 
 	/**
@@ -186,7 +201,9 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 		if (updateUI && discoverServerService != null) {
 			discoverServerService.forceUpdateWithUIMessage(((DrinViewerActivity) getActivity()).getMessageHandler(),hostCollection);
 		} else if (discoverServerService == null) {
-			Toast.makeText(((DrinViewerActivity) getActivity()).getBaseContext(),"Error: Discovery Service not running", Toast.LENGTH_SHORT).show();
+			Toast.makeText(((DrinViewerActivity) getActivity()).getBaseContext(),"Error: "+
+					((DrinViewerActivity) getActivity()).getBaseContext().getResources().getString(R.string.discover_server_servicename)+
+					" not running", Toast.LENGTH_SHORT).show();
 		}
 	}
 	
@@ -225,6 +242,11 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 */
 	@Override
 	public void onServiceDisconnected(ComponentName name) {
+		// sends a message to the DrinViewerBroadcastReceiver to stop the discovery repeat
+		Intent i = new Intent(((DrinViewerActivity) getActivity()).getBaseContext(),DrinViewerBroadcastReceiver.class);
+		i.setAction(getResources().getString(R.string.broadcast_stopalarmrepeater));
+		((DrinViewerActivity) getActivity()).getBaseContext().sendBroadcast(i);
+		
 		discoverServerService = null;
 	}
 
@@ -235,6 +257,12 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	@Override
 	public void onServiceConnected(ComponentName name, IBinder service) {
 		discoverServerService = ((DiscoverServerBinder) service).getService();
+		
+		// sends a message to the DrinViewerBroadcastReceiver to start the discovery repeat
+		Intent i = new Intent(((DrinViewerActivity) getActivity()).getBaseContext(),DrinViewerBroadcastReceiver.class);
+		i.setAction(getResources().getString(R.string.broadcast_startalarmrepeater));
+		((DrinViewerActivity) getActivity()).getBaseContext().sendBroadcast(i);
+		
 		// Runs a discovery with update to the UI
 		doDiscover(true);
 	}

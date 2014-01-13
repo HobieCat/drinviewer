@@ -33,6 +33,18 @@ import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.support.v4.app.NotificationCompat;
 
+/**
+ * BroadcastReceiver class for the following actions:
+ * - WifiManager.NETWORK_STATE_CHANGED_ACTION
+ * - ConnectivityManager.CONNECTIVITY_ACTION
+ * - broadcast_startdiscovery      (DrinViewer custom)
+ * - broadcast_cleanhostcollection (DrinViewer custom)
+ * - broadcast_startalarmrepeater  (DrinViewer custom)
+ * - broadcast_stopalarmrepeater   (DrinViewer custom)
+ * 
+ * @author giorgio
+ *
+ */
 public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 	/**
 	 * Notification counter, for debugging purposes
@@ -54,7 +66,10 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 		if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
 	        NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
 	        if (networkInfo.isConnected()) {
-	            // Wifi is connected
+	        	/**
+	        	 * Wifi is connected, start the discovery
+	        	 * process repeated at a fixed time interval
+	        	 */
 	            isStarted = startAlarmRepeater(context);
 	            
 	            // sets text of the notification
@@ -65,7 +80,10 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 	    } else if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
 	        NetworkInfo networkInfo = intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
 	        if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI && !networkInfo.isConnected()) {
-	            // Wifi is disconnected
+	            /**
+	             * Wifi is disconnected, stop the discovery
+	             * process repeating, it would be a waste of resources
+	             */
 	            stopAlarmRepeater(context);
 	            
 	            // sets text of the notification
@@ -75,15 +93,46 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 	        }
 	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startdiscovery)) || 
 	    		   intent.getAction().equals(context.getResources().getString(R.string.broadcast_cleanhostcollection))) {
-	    	// Calls the DiscoverServerService asking to do a discovery or a clean host collection
+	    	/**
+	    	 * Calls the DiscoverServerService asking to do a discovery
+	    	 *  or a clean host collection by simply forwarding the received action
+	    	 */
     		Intent service = new Intent(context, DiscoverServerService.class);
     		service.setAction(intent.getAction());
     		context.startService(service);
     		
             // sets text of the notification
-    		// TODO: remove these 2 in final version    		
-    		notificationText.append("Started discovery or clean");
+    		// TODO: remove these 3 in final version    		
+    		if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startdiscovery))) notificationText.append("Started discovery");
+    		else notificationText.append("Perform list clean");
     		sendNotify = true;
+	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startalarmrepeater))) {
+	    	/**
+	    	 * start the alarm repeater only if wifi is connected already
+	    	 * used by ServerListFragmend.onServiceConnected method to start the discovery
+	    	 * if the application is launched being already connected to a WiFi network
+	    	 */
+	    	ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+	    	NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+	    	
+	    	if (mWifi.isConnected()) isStarted = startAlarmRepeater(context);
+            
+            // sets text of the notification
+    		// TODO: remove these 2 in final version	            
+            notificationText.append( "Alarm start, started="+isStarted );
+            sendNotify = true;
+	    	
+	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_stopalarmrepeater))) {
+	    	/**
+	    	 *  stop the alarm repeater. period.
+	    	 *  used by ServerListFragment.onDestroy method
+	    	 */
+	    	stopAlarmRepeater(context);
+	    	
+            // sets text of the notification
+    		// TODO: remove these 2 in final version    
+            notificationText.append( "Alarm stop, started="+isStarted );
+            sendNotify = true;
 	    }
 		
 		// Handles the notification for debugging purposes

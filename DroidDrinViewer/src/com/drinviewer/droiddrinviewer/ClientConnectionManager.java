@@ -17,7 +17,6 @@
  * along with DrinViewer.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-
 package com.drinviewer.droiddrinviewer;
 
 import java.io.BufferedReader;
@@ -32,8 +31,6 @@ import com.drinviewer.common.Constants;
 import com.drinviewer.common.HostData;
 import com.drinviewer.common.IncomingDrinEvent;
 
-
-
 /**
  * pairing manager class, handles the pairing communication
  * between the android application and the desktop one
@@ -46,19 +43,16 @@ public class ClientConnectionManager {
 	/**
 	 * port number to open
 	 * 
-	 * @var int
 	 */
 	private int port = Constants.PORT;
 	
 	/**
 	 * the host to which the pairing request is sent
-	 * @var HostData
 	 */
 	private HostData hostToPair;
 	
 	/**
 	 * the device UUID to be paired
-	 * @var String
 	 */
 	private String uuid;
 	
@@ -125,27 +119,20 @@ public class ClientConnectionManager {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * Sends out the incoming drin event to the host
 	 * passed when calling the constructor
 	 * 
-	 * @throws IOException 
-	 * @throws UnknownHostException 
+	 * @param event IncomingDrinEvent Object to send
+	 * @throws UnknownHostException
+	 * @throws IOException
 	 */
-	public void sendDrinEvent() throws UnknownHostException, IOException {
+	public void sendDrinEvent (IncomingDrinEvent event) throws UnknownHostException, IOException {
 		initConnection();
 		try {
-			// TODO: this was done for testing purposes on desktop SWT simulator program, must be implemented in Android
-			// gets the imageData
-//            byte[] imageData = new DrinImageLoader("format.jpg").getScaled(Constants.ICON_SIZE);
-			byte[] imageData = null;
-			
 			out.writeUTF(Constants.INCOMING_DRIN);
-			out.writeObject(new IncomingDrinEvent(this, "Incoming Call", "Giorgio Consorti\n+39 666-666-666",imageData));
-			// out flush will be done when closing connection
-		} catch (IOException e) {
-			e.printStackTrace();
+			out.writeObject(event);
 		} finally {
 			closeConnection();
 		}

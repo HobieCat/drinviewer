@@ -112,12 +112,20 @@ public class DiscoverServer implements Runnable {
 			DatagramSocket socket = new DatagramSocket();
 			socket.setBroadcast(true);
 			
+			// declare the receive buffer
+			byte[] recvBuf = null;
+			// declare the receiver DatagramPacket
+			DatagramPacket receivePacket = null;
+			
 			running = uuid!=null;
 			
 			int loopNumber = 0;
 			boolean packetSentInThisLoop = false;
 			
-			if (running) sendMessage(DroidDrinViewerConstants.MSG_DISCOVER_START);
+			if (running) {
+				sendMessage(DroidDrinViewerConstants.MSG_DISCOVER_START);
+				recvBuf = new byte[Constants.BUFLEN];				
+			}
 			
 			while (running) {
 				try {
@@ -130,11 +138,13 @@ public class DiscoverServer implements Runnable {
 					}
 					
 					// setup stuff and wait for a response
-					byte[] recvBuf = new byte[Constants.BUFLEN];
-					DatagramPacket receivePacket = new DatagramPacket(recvBuf, recvBuf.length);
-					
-					socket.setSoTimeout(Constants.DISCOVER_TIMEOUT);
-					socket.receive(receivePacket);
+					if (recvBuf!=null) {
+						if (receivePacket==null) receivePacket = new DatagramPacket(recvBuf, recvBuf.length);
+						else receivePacket.setData(recvBuf);
+						
+						socket.setSoTimeout(Constants.DISCOVER_TIMEOUT);
+						socket.receive(receivePacket);
+					}
 					
 					// we have a response here, since receive is blocking
 					// extract the response to a string and check if it's what we'd expected
@@ -158,6 +168,9 @@ public class DiscoverServer implements Runnable {
 						serverCollection.put(new HostData(serverHostName,serverHostAddress,isPaired));
 						sendMessage(DroidDrinViewerConstants.MSG_SERVER_FOUND);
 					  }
+				    
+				    message = null;
+				    
 					/**
 					 *  USE THE FOLLOWING CODE IF AN ARRAY OF DATA IS TO BE RECEIVED IN A SUBSEQUENT PACKET
 					 */

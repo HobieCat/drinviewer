@@ -36,7 +36,7 @@ public class Constants {
 	// how many time to run the test server application
 	public static final int    SECONDS_TO_RUN_SERVER = 600;
 	// default length of the buffer used for UDP communication while in DISCOVER phase
-	public static final int    BUFLEN = 15000;
+	public static final int    BUFLEN = 150;
 	
 	// broadcast address for sending UDP packets while in DISCOVER phase
 	public static final String BROADCAST_ADDRESS = Constants.getFirstBroadcastAddressAsString();

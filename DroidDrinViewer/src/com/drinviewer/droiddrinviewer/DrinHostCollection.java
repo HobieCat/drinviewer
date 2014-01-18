@@ -19,20 +19,71 @@
  */
 package com.drinviewer.droiddrinviewer;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import com.drinviewer.common.HostCollection;
-import com.drinviewer.common.HostData;
 
 /**
  * Host collection class for Android app
  * 
- * Only overrides the put method that no longer needs to be synchronized
+ * Implements the Parcelable interface to
+ * properly communicate with the background service
  * 
  * @author giorgio
  *
  */
-public class DrinHostCollection extends HostCollection {
-	@Override
-	public void put(HostData element) {
+public class DrinHostCollection extends HostCollection implements Parcelable {
+	
+	/**
+	 * Creator Object to used to implement the Parcelable interface
+	 */
+	public static final Creator<DrinHostCollection> CREATOR = new Creator<DrinHostCollection>() {
+
+		@Override
+		public DrinHostCollection createFromParcel(Parcel parcel) {
+			return new DrinHostCollection(parcel);
+		}
+
+		@Override
+		public DrinHostCollection[] newArray(int size) {
+			return new DrinHostCollection[size];
+		}
+	};
+	
+	/**
+	 * constructor, just calls the super
+	 */
+	public DrinHostCollection() {
+		super();
+	}
+
+	/**
+	 * constructor from a parcel Object
+	 * 
+	 * @param parcel the received Parcel
+	 */
+	@SuppressWarnings("unchecked")
+	public DrinHostCollection(Parcel parcel) {
+		setHostList(parcel.readArrayList(DrinHostCollection.class.getClassLoader()));
+	}
+
+	/**
+	 * puts an item in the collection
+	 * 
+	 * @param element the DrinHostData to be added
+	 */
+	public void put(DrinHostData element) {
 		add (element);
+	}
+
+	@Override
+	public int describeContents() {
+		return 0;
+	}
+
+	@Override
+	public void writeToParcel(Parcel dest, int flags) {
+		dest.writeList(hostList);
 	}
 }

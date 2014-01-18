@@ -41,7 +41,6 @@ public class DrinViewerActivity extends FragmentActivity {
 	/**
 	 * message handler for the whole application
 	 * 
-	 * @var DrinViewerHandler
 	 */
 	private DrinViewerHandler messageHandler;
 	

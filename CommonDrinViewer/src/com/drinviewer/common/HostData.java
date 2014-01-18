@@ -46,6 +46,16 @@ public class HostData {
 	public boolean isPaired;
 	
 	/**
+	 * constructor, set all properties
+	 * to empty string and isPaired to false
+	 */
+	public HostData() {
+		this.hostname = "";
+		this.address = "";
+		this.isPaired = false;
+	}
+	
+	/**
 	 * constructor, sets hostname and IP address
 	 * 
 	 * @param hostname the server hostname to be set

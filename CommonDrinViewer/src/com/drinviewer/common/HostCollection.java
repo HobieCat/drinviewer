@@ -35,7 +35,7 @@ public class HostCollection {
 	 * the array of the discovered hosts
 	 * 
 	 */
-	private ArrayList<HostData> hostList;
+	protected ArrayList<HostData> hostList;
 	
 	/**
 	 * true  if consumer should wait for producer to send message,
@@ -55,7 +55,7 @@ public class HostCollection {
      * constructor, allocates a new ArrayList
      */
 	public HostCollection() {
-		hostList = new ArrayList<HostData>();
+		setHostList(new ArrayList<HostData>());
 	}
 	
 	/**
@@ -193,5 +193,12 @@ public class HostCollection {
 		elementReady = false;
 		// notify consumer so that getLast shall return and it will stop waiting
 		notifyAll();
+	}
+
+	/**
+	 * @param hostList the hostList to set
+	 */
+	public void setHostList(ArrayList<HostData> hostList) {
+		this.hostList = hostList;
 	}
 }

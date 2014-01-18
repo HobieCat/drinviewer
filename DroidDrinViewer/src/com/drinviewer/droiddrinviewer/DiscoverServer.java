@@ -27,7 +27,6 @@ import java.net.InetAddress;
 import java.net.SocketTimeoutException;
 
 import com.drinviewer.common.Constants;
-import com.drinviewer.common.HostData;
 import com.drinviewer.droiddrinviewer.DrinViewerActivity.DrinViewerHandler;
 
 
@@ -38,7 +37,7 @@ import com.drinviewer.droiddrinviewer.DrinViewerActivity.DrinViewerHandler;
  * @author giorgio
  *
  */
-public class DiscoverServer implements Runnable {
+public class DiscoverServer {
 	
 	/**
 	 * port number to open
@@ -70,11 +69,6 @@ public class DiscoverServer implements Runnable {
 	private DrinViewerHandler handler;
 	
 	/**
-	 * true if must send the message to update the UI
-	 */
-	private boolean sendUpdateUIMessage;
-	
-	/**
 	 * constructor, just sets the serverCollection
 	 * 
 	 * @param serverCollection the HostCollection object to be filled
@@ -83,7 +77,6 @@ public class DiscoverServer implements Runnable {
 	public DiscoverServer(DrinHostCollection serverCollection) {
 		this.serverCollection = serverCollection;
 		handler = null;
-		setSendUpdateUIMessage(false);
 	}
 	
 	/**
@@ -99,10 +92,9 @@ public class DiscoverServer implements Runnable {
 	}
 	
 	/**
-	 * run implementation
+	 * runs the actual discovery protocol
 	 */
-	@Override
-	public void run() {
+	public DrinHostCollection doDiscover() {
 		try {
 			// build the datas to be sent	
 			byte[] sendData = (Constants.DISCOVER_REQUEST+Constants.MESSAGE_CHAR_SEPARATOR+uuid).getBytes();
@@ -165,7 +157,7 @@ public class DiscoverServer implements Runnable {
 						if (temp.length>2) serverHostName = temp[2];
 						if (temp.length>1) isPaired = temp[1].equals(Constants.MESSAGE_DEVICE_IS_PAIRED);
 						// add the the hostname and IP address to the list of discovered servers
-						serverCollection.put(new HostData(serverHostName,serverHostAddress,isPaired));
+						serverCollection.put(new DrinHostData(serverHostName,serverHostAddress,isPaired));
 						sendMessage(DroidDrinViewerConstants.MSG_SERVER_FOUND);
 					  }
 				    
@@ -211,6 +203,8 @@ public class DiscoverServer implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		return serverCollection;
 	}
 	
 	/**
@@ -220,7 +214,7 @@ public class DiscoverServer implements Runnable {
 	 */
 	private void sendMessage(int what)
 	{
-		if (isSendUpdateUIMessage() && handler != null) {
+		if (handler != null) {
 			switch (what) {
 			case DroidDrinViewerConstants.MSG_SERVER_FOUND:
 			case DroidDrinViewerConstants.MSG_DISCOVER_START:
@@ -249,7 +243,7 @@ public class DiscoverServer implements Runnable {
 	 * @access public
 	 */
 	public void terminate() {
-		serverCollection.notifyProducerHasStopped();
+		// serverCollection.notifyProducerHasStopped();
 		running = false;
 		sendMessage(DroidDrinViewerConstants.MSG_DISCOVER_DONE);
 	}
@@ -269,23 +263,5 @@ public class DiscoverServer implements Runnable {
 	 */
 	public void connectOnPort(int port) {
 		this.port = port;
-	}
-
-	/**
-	 * sendUpdateUIMessage getter
-	 * 
-	 * @return the sendUpdateUIMessage
-	 */
-	public boolean isSendUpdateUIMessage() {
-		return sendUpdateUIMessage;
-	}
-
-	/**
-	 * sendUpdateUIMessage setter
-	 * 
-	 * @param sendUpdateUIMessage the sendUpdateUIMessage to set
-	 */
-	public void setSendUpdateUIMessage(boolean sendUpdateUIMessage) {
-		this.sendUpdateUIMessage = sendUpdateUIMessage;
 	}
 }

@@ -19,12 +19,12 @@
  */
 package com.drinviewer.droiddrinviewer;
 
-import com.drinviewer.droiddrinviewer.DrinViewerActivity.DrinViewerHandler;
-
 import android.app.Service;
 import android.content.Intent;
-import android.os.Binder;
 import android.os.IBinder;
+import android.os.RemoteCallbackList;
+import android.os.RemoteException;
+import android.util.Log;
 /**
  * Discover DrinViewer Hosts available for pairing or already paired
  * 
@@ -35,103 +35,109 @@ import android.os.IBinder;
  */
 public class DiscoverServerService extends Service {
 
-	/**
-	 * The hostCollection used by the service
-	 * 
-	 * Shared between the UI list and the background running
-	 * process. This is the most up-to-date host list available
-	 * ready to use whenever it's needed
-	 */
-	private DrinHostCollection hostCollection;
+	//TODO Remove this
+	private final static String TAG = DiscoverServerService.class.getSimpleName();
 	
-	/**
-	 * The DiscoverServer Runnable to be run
-	 */
-	private DiscoverServer discoverServer;
+	private final Object discoverLock = new Object();
 	
-	/**
-	 * Service binder
-	 */
-	private final IBinder mBinder = new DiscoverServerBinder();
+	private DrinHostCollection hostCollection = new DrinHostCollection(); // search results
 	
-	@Override
-	public void onCreate() {
-		super.onCreate();
-		hostCollection = new DrinHostCollection();
-	}
+	private RemoteCallbackList<DiscoverServerListener> listeners = new RemoteCallbackList<DiscoverServerListener>();
+	
+	private DiscoverServerApi.Stub discoverAPI = new DiscoverServerApi.Stub() {
 
-	/**
-	 * When service gets started it looks if the passed intent action is a request to start
-	 * a discovery or a reqeust to clean the stored hosCollection (used e.g. when the deivce
-	 * is disconnected to a WiFi network to display an empty list) 
-	 */
+		@Override
+		public DrinHostCollection getMostUpToDateCollection() throws RemoteException {
+			synchronized (discoverLock) {
+				return hostCollection;				
+			}
+		}
+		
+		@Override
+		public void addListener(DiscoverServerListener listener) throws RemoteException {
+			if (listener != null) listeners.register(listener);
+		}
+		
+		@Override
+		public void removeListener(DiscoverServerListener listener) throws RemoteException {
+			if (listener != null) listeners.unregister(listener);
+		}
+	};
+	
+	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		
+		Log.i(TAG,"action="+intent.getAction());
 		if (intent.getAction().equals(getResources().getString(R.string.broadcast_startdiscovery))) {
-			// Instantiates the DiscoverServerRunnable
-			discoverServer = new DiscoverServer(hostCollection);
-			// Forces a hostCollection update without updating the UI
-			forceUpdate(false);
+			Log.i(TAG,"Starting discoverTask");
+			// discoverTask.start();
+			new Thread () {
+				@Override
+				public void run() {
+					runDiscover();
+				}
+			}.start();			
 		} else if (intent.getAction().equals(getResources().getString(R.string.broadcast_cleanhostcollection))) {
-			// Clears the hostCollection
 			hostCollection.init();
 		}
 		return Service.START_NOT_STICKY;
 	}
+	
+	private void runDiscover () {
+		try {
+			/**
+			 * Sends a (sort of) discovery started event to all listeners
+			 */
+			
+			int N  = listeners.beginBroadcast();
+			for (int i=0; i<N; i++)
+			{
+				listeners.getBroadcastItem(i).onHostDiscoveryStarted();
+			}
+			listeners.finishBroadcast();
+			
+			hostCollection.init();
+			DiscoverServer ds = new DiscoverServer(hostCollection);
+			ds.setUUID(DrinViewerApplication.getInstallationUUID());
+
+			synchronized (discoverLock) {
+				hostCollection = ds.doDiscover();
+			}
+			
+			N  = listeners.beginBroadcast();
+			for (int i=0; i<N; i++)
+			{
+				listeners.getBroadcastItem(i).onHostDiscoveryDone();
+			}
+			listeners.finishBroadcast();
+			
+			Log.d(TAG, "size=" + hostCollection.size());
+		} catch (Throwable t) {
+			Log.e(TAG, "Failed to retrieve the hostCollection:", t);
+		}		
+	}
+
+//	@Override
+//	public void onCreate() {
+//		super.onCreate();
+//		Log.i(TAG, "Service creating");
+//	}
 
 	@Override
-	public IBinder onBind(Intent arg0) {
-		return mBinder;
+	public void onDestroy() {
+		super.onDestroy();
+		Log.i(TAG, "Service destroying");
+		listeners.kill(); // TODO check this
 	}
-	
-	/**
-	 * Forces a hostCollection update by actually running the DiscoverServer Runnable in a new Thread
-	 * 
-	 * @param updateUI true if an update to the UI is required
-	 */
-	private void forceUpdate (boolean updateUI) {
-		// Sets the UUID to be used
-		discoverServer.setUUID( DrinViewerApplication.getInstallationUUID());
-		// Tells the DiscoverServer if it must send messages to the DrinViewerActivity handler
-		discoverServer.setSendUpdateUIMessage(updateUI);
-		// Inits the collectiom
-		hostCollection.init();
-		// Runs the Runnable
-		new Thread(discoverServer).start();	
-	}
-	
-	/**
-	 * Forces a hostCollection from the UI
-	 * 
-	 * @param handler the DrinViewerHandler to use in order to handle messages to update the UI
-	 * @param passedCollection the DrinHostCollection that's being used when drawing the UI
-	 */
-	public void forceUpdateWithUIMessage (DrinViewerHandler handler, DrinHostCollection passedCollection) {
-		// Sets the hostCollection to the passed one, so the listview gets properly updated
-		hostCollection = passedCollection;
-		// Tells the DiscoverServer which hostCollection and handler to use
-		discoverServer = new DiscoverServer(hostCollection, handler);
-		// Runs the collection+UI update
-		forceUpdate(true);
-	}
-	
-	/*
-	 * Get the most up-to-date hostCollection
-	 */
-	public DrinHostCollection getHostCollection() {
-		return hostCollection;
-	}
-	
-	/**
-	 * DiscoverServerBinder to bind the DiscoverServerService
-	 * 
-	 * @author giorgio
-	 *
-	 */
-	public class DiscoverServerBinder extends Binder {
-		public DiscoverServerService getService() {
-			return DiscoverServerService.this;
+
+	@Override
+	public IBinder onBind(Intent intent) {
+		if (DiscoverServerService.class.getName().equals(intent.getAction())) {
+			Log.d(TAG, "Bound by intent " + intent);
+			return discoverAPI;
+		} else {
+			return null;
 		}
 	}
+
 }

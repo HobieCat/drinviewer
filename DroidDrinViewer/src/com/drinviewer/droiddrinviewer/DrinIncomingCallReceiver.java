@@ -21,9 +21,6 @@ package com.drinviewer.droiddrinviewer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import com.drinviewer.common.HostData;
-import com.drinviewer.common.IncomingDrinEvent;
-import com.drinviewer.droiddrinviewer.DiscoverServerService.DiscoverServerBinder;
 
 import android.content.BroadcastReceiver;
 import android.content.ContentUris;
@@ -33,9 +30,14 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.provider.ContactsContract;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
+
+import com.drinviewer.common.HostData;
+import com.drinviewer.common.IncomingDrinEvent;
 
 /**
  * BroadcastReceiver to receive the PHONE_STATE action.
@@ -63,10 +65,17 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
 	@Override   
     public void onReceive(Context context, Intent intent) {
 		// Gets the Binder to the DiscoverServerService
-		DiscoverServerBinder b = (DiscoverServerBinder) peekService(context, new Intent(context, DiscoverServerService.class));
+		IBinder b = peekService(context, new Intent(context, DiscoverServerService.class));
+		DiscoverServerApi discoverServerApi = DiscoverServerApi.Stub.asInterface(b);
+		
 		if (b != null) {
 			// Get the hostCollection
-			DrinHostCollection hostCollection = b.getService().getHostCollection();
+			DrinHostCollection hostCollection = null;
+			try {
+				hostCollection = discoverServerApi.getMostUpToDateCollection();
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
 			// Do send the IncomingDrinEvent only if there's someone willing to receiving it
 			if (hostCollection != null && hostCollection.size()>0) {
 				// Get The TelephonyManager

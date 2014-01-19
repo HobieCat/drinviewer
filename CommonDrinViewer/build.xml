@@ -30,7 +30,6 @@
 	<target name="makedir">
 		<mkdir dir="${build.dir}" />
 		<mkdir dir="${docs.dir}" />
-		<mkdir dir="${dist.dir}" />	
 	</target>
     
     <target depends="init" name="compile">

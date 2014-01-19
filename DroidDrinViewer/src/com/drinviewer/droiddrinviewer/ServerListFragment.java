@@ -54,12 +54,6 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	private DrinHostAdapter adapter;
 	
 	/**
-	 * The DrinHostCollection to display
-	 * 
-	 */
-	 private DrinHostCollection hostCollection;
-	
-	/**
 	 * ProgressBar to be shown when updating the UI
 	 * while server discovery is running
 	 * 
@@ -86,7 +80,9 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 		}
 
 		@Override
-		public void onHostDiscoveryStarted() throws RemoteException {
+		public void onHostDiscoveryStarted() throws RemoteException {			
+			getAdapter().initHostCollection();
+			
 			 if (mustUpdateUI) {
 				 ((DrinViewerActivity) getActivity()).getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_START);
 			 }
@@ -97,9 +93,9 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 
 		@Override
 		public void onHostDiscoveryDone() throws RemoteException {			
-			DrinHostCollection hostCollection = discoverServerApi.getMostUpToDateCollection();
-			if (hostCollection != null) {
-				getAdapter().setHostCollection(hostCollection);
+			DrinHostCollection newHostCollection = discoverServerApi.getMostUpToDateCollection();
+			if (newHostCollection != null) {
+				getAdapter().setHostCollection(newHostCollection);
 			}
 			
 			if (mustUpdateUI) {
@@ -126,22 +122,14 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 		// Set visibility is its value was retained
 		if (discoverServerVisibility!=null) discoverServerProgress.setVisibility(discoverServerVisibility);
 		
-		// If the collection is not null, it was retained by setRetainInstance call
-		// so we don't build a new one here but use the retained one instead
-		if (hostCollection==null) {
-			// Instantiate the collection to be passed to the producer and list adapter			
-			hostCollection = new DrinHostCollection();
-		}
-		
 		// Instantiate the list adapter		
-		adapter = new DrinHostAdapter(view.getContext(), hostCollection);
+		adapter = new DrinHostAdapter(view.getContext());
 		
 		// set the list adapter and the OnItemClickListener
 		serverListView.setAdapter(adapter);
 		serverListView.setOnItemClickListener(new OnItemClickListener() {
 			@Override
-			public void onItemClick(AdapterView<?> parent, View view,
-					int position, long id) {
+			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				doPairingToggle(position);
 			}
 		});
@@ -173,21 +161,26 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	public void onResume() {
 		super.onResume();
 		mustUpdateUI = true;
-		// Set visibility is its value was retained
-		if (discoverServerVisibility!=null) discoverServerProgress.setVisibility(discoverServerVisibility);
 		
-		/*
-		 * If the service has a hostCollection ready
-		 * use that one that is the most up-to-date
-		 */
 		if (discoverServerApi != null) {
 			try {
-				DrinHostCollection newCollection = discoverServerApi.getMostUpToDateCollection();
-				if (newCollection != null) {
-					hostCollection = newCollection;
-					getAdapter().setHostCollection(hostCollection);
-					getAdapter().notifyDataSetChanged();
+				boolean isUpdating = discoverServerApi.isRunning();
+				
+				discoverServerVisibility = (isUpdating) ? View.VISIBLE : View.GONE;
+				discoverServerProgress.setVisibility(discoverServerVisibility);
+				/*
+				 * If the service is not updating and has a hostCollection
+				 * ready use that one that is the most up-to-date
+				 */
+				
+				if (!isUpdating) {
+					DrinHostCollection newCollection = discoverServerApi.getMostUpToDateCollection();
+					if (newCollection != null) {
+						getAdapter().setHostCollection(newCollection);
+						getAdapter().notifyDataSetChanged();
+					}
 				}
+				
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
@@ -233,21 +226,33 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 * @param isPaired true if the host is paired
 	 */
 	public void updateIsPaired(int position, boolean isPaired) {
-		hostCollection.setPaired(hostCollection.get(position), isPaired);
+		getAdapter().updateIsPaired(position, isPaired);
 		getAdapter().notifyDataSetChanged();
 	}
 
 	/**
-	 * Runs the server discovery protocol
+	 * Runs the server discovery protocol, if the
+	 * service is not doing an update by itself
 	 * 
 	 * @param updateUI true if the UI must be updated while discovering
 	 */
 	public void doDiscover(boolean updateUI) {
 		Log.i("ServerListFragment", "doDiscover");
+		boolean doDiscover = true;
 		
-		Intent intent = new Intent(getActivity().getBaseContext(), DrinViewerBroadcastReceiver.class);
-		intent.setAction(getResources().getString(R.string.broadcast_startdiscovery));
-		getActivity().sendBroadcast(intent);
+		try {
+			if (discoverServerApi != null) {
+				doDiscover = !discoverServerApi.isRunning();
+			}
+		} catch (RemoteException e) {
+			doDiscover = false;
+		} finally {
+			if (doDiscover) {
+				Intent intent = new Intent(getActivity().getBaseContext(), DrinViewerBroadcastReceiver.class);
+				intent.setAction(getResources().getString(R.string.broadcast_startdiscovery));
+				getActivity().sendBroadcast(intent);		
+			}
+		}
 	}
 	
 	/**
@@ -266,8 +271,8 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 * @param position the position of the server to pair or unpair
 	 */
 	private void doPairingToggle(int position) {
-		if (position < hostCollection.size()) {
-			HostData toPair = hostCollection.get(position);
+		if (position < getAdapter().getHostCollection().size()) {
+			HostData toPair = getAdapter().getHostCollection().get(position);
 			if (toPair != null) {
 				ClientConnectionManager pm = new ClientConnectionManager(toPair);
 				pm.setUUID(DrinViewerApplication.getInstallationUUID());

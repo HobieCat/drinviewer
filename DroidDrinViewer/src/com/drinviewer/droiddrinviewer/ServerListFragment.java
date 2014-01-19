@@ -27,7 +27,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -75,11 +74,6 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	
 	private DiscoverServerListener.Stub hostUpdatedListener = new DiscoverServerListener.Stub() {
 		@Override
-		public void handleHostCollectionUpdated() throws RemoteException {
-			Log.i("hostUpdaterListener","listened!!!!");
-		}
-
-		@Override
 		public void onHostDiscoveryStarted() throws RemoteException {			
 			getAdapter().initHostCollection();
 			
@@ -104,6 +98,14 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 				discoverServerVisibility = View.GONE;
 			}
 		}
+
+		@Override
+		public void onHostDiscovered(DrinHostData hostData) throws RemoteException {
+			if (mustUpdateUI) {
+				getAdapter().getHostCollection().add(hostData);
+				((DrinViewerActivity) getActivity()).getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_SERVER_FOUND);
+			}
+		}
 	}; 
 	
 	/**
@@ -119,11 +121,12 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 		ListView serverListView = (ListView) view.findViewById(R.id.serverListView);
 		// Get the progress bar
 		discoverServerProgress = (ProgressBar) view.findViewById(R.id.discoverServerProgress);
+		
 		// Set visibility is its value was retained
 		if (discoverServerVisibility!=null) discoverServerProgress.setVisibility(discoverServerVisibility);
 		
-		// Instantiate the list adapter		
-		adapter = new DrinHostAdapter(view.getContext());
+		// Instantiate the list adapter	if it was not retained	
+		if (adapter == null) adapter = new DrinHostAdapter(view.getContext());
 		
 		// set the list adapter and the OnItemClickListener
 		serverListView.setAdapter(adapter);
@@ -133,7 +136,6 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 				doPairingToggle(position);
 			}
 		});
-		
 		// Sets fragment to be retained		
 		setRetainInstance(true);
 		return view;
@@ -146,12 +148,10 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
-	    
+	    // bind to the DiscoverServerService
 		Intent intent = new Intent(DiscoverServerService.class.getName());
 		//TODO check Context.BIND_AUTO_CREATE
 	    getActivity().getApplication().bindService(intent, this, 0);
-	    
-	    Log.i ("ServerListFragment","onActivityCreated");
 	}
 	
 	/**
@@ -170,9 +170,8 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 				discoverServerProgress.setVisibility(discoverServerVisibility);
 				/*
 				 * If the service is not updating and has a hostCollection
-				 * ready use that one that is the most up-to-date
+				 * ready, use that one that is the most up-to-date
 				 */
-				
 				if (!isUpdating) {
 					DrinHostCollection newCollection = discoverServerApi.getMostUpToDateCollection();
 					if (newCollection != null) {
@@ -180,13 +179,15 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 						getAdapter().notifyDataSetChanged();
 					}
 				}
-				
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
 		}
 	}
-	
+
+	/**
+	 * onPause Fragment method
+	 */
 	@Override
 	public void onPause() {
 		super.onPause();
@@ -199,14 +200,13 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		
 		try {
+			// remove the listener and unbind the DiscoverServerService
 			discoverServerApi.removeListener(hostUpdatedListener);
 			getActivity().getApplication().unbindService(this);
 		} catch (Throwable t) {
-			Log.w("ServerListFragment", "Failed to unbind from the service", t);
+			t.printStackTrace();
 		}
-		Log.i("ServerListFragment", "onDestroy");
 	}
 
 	/**
@@ -228,6 +228,15 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	public void updateIsPaired(int position, boolean isPaired) {
 		getAdapter().updateIsPaired(position, isPaired);
 		getAdapter().notifyDataSetChanged();
+		
+		// notify the DiscoverServerService of the change
+		try {
+			if (discoverServerApi != null) {
+				discoverServerApi.updatePairState(position, isPaired);
+			}
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -236,18 +245,20 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 * 
 	 * @param updateUI true if the UI must be updated while discovering
 	 */
-	public void doDiscover(boolean updateUI) {
-		Log.i("ServerListFragment", "doDiscover");
+	public void doDiscover() {
 		boolean doDiscover = true;
 		
 		try {
 			if (discoverServerApi != null) {
+				// force a discover only if the service is not doing it already
 				doDiscover = !discoverServerApi.isRunning();
 			}
 		} catch (RemoteException e) {
+			// on remote error, don't run the discover process
 			doDiscover = false;
 		} finally {
 			if (doDiscover) {
+				// run the discover by sending a message broadcast_startdiscovery to the DrinViewerBroadcastReceiver
 				Intent intent = new Intent(getActivity().getBaseContext(), DrinViewerBroadcastReceiver.class);
 				intent.setAction(getResources().getString(R.string.broadcast_startdiscovery));
 				getActivity().sendBroadcast(intent);		
@@ -261,8 +272,10 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 * @param v either View.GONE or View.Visible
 	 */
 	public void setProgressServerVisibility (int v) {
-		discoverServerVisibility = Integer.valueOf(v);
-		discoverServerProgress.setVisibility(discoverServerVisibility.intValue());
+		if (v == View.VISIBLE || v == View.GONE) {
+			discoverServerVisibility = Integer.valueOf(v);
+			discoverServerProgress.setVisibility(discoverServerVisibility.intValue());
+		}
 	}
 
 	/**
@@ -274,6 +287,7 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 		if (position < getAdapter().getHostCollection().size()) {
 			HostData toPair = getAdapter().getHostCollection().get(position);
 			if (toPair != null) {
+				// prepares the data and runs the pair protocol async task
 				ClientConnectionManager pm = new ClientConnectionManager(toPair);
 				pm.setUUID(DrinViewerApplication.getInstallationUUID());
 				new PairProtocolTask(((DrinViewerActivity) getActivity()).getMessageHandler(), position).execute(pm);
@@ -290,7 +304,6 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 */
 	@Override
 	public void onServiceDisconnected(ComponentName name) {
-		Log.i("ServerListFragment", "Service connection closed");		
 		discoverServerApi = null;
 	}
 
@@ -300,18 +313,19 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 */
 	@Override
 	public void onServiceConnected(ComponentName name, IBinder service) {
-
-		Log.i("ServerListFragment", "Service connection established");
-		
 		// that's how we get the client side of the IPC connection
 		discoverServerApi = DiscoverServerApi.Stub.asInterface(service);
 		
 		try {
 			discoverServerApi.addListener(hostUpdatedListener);
 		} catch (RemoteException e) {
-			Log.e("ServerListFragment", "Failed to add listener", e);
+			e.printStackTrace();
 		}
 		
-		doDiscover(false);	
+        // sends a message to the DrinViewerBroadcastReceiver to start the discovery repeat
+		// this fires an immediate discovery, so there's no need to call the doDiscover method
+        Intent i = new Intent(((DrinViewerActivity) getActivity()).getBaseContext(),DrinViewerBroadcastReceiver.class);
+        i.setAction(getResources().getString(R.string.broadcast_startalarmrepeater));
+        ((DrinViewerActivity) getActivity()).getBaseContext().sendBroadcast(i);
 	}
 }

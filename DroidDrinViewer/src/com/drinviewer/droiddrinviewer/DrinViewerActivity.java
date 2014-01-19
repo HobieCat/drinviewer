@@ -94,7 +94,6 @@ public class DrinViewerActivity extends FragmentActivity {
 		/**
 		 * weak reference to the containing activity
 		 * 
-		 * @var WeakReference<DrinViewerActivity>
 		 */
 		private final WeakReference<DrinViewerActivity> mActivity;
 

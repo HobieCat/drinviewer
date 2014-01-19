@@ -54,9 +54,8 @@
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
         		<action android:name="android.net.wifi.STATE_CHANGE"/>
-        		<action android:name="@string/broadcast_startdiscovery"/>
         		<!-- 
-        		
+        		<action android:name="@string/broadcast_startdiscovery"/>
         		<action android:name="@string/broadcast_cleanhostcollection"/>
         		<action android:name="@string/broadcast_startalarmrepeater"/>
         		<action android:name="@string/broadcast_stopalarmrepeater"/>
@@ -69,17 +68,21 @@
                 <action android:name="android.intent.action.PHONE_STATE" />
             </intent-filter>
         </receiver>
-				
-	<service
-	    android:name="com.drinviewer.droiddrinviewer.DiscoverServerService"
-	    android:icon="@drawable/ic_launcher"
-	    android:label="@string/discover_server_servicename"
-	    android:process=":drinviewerdiscovery"
-	    android:exported="false" >
-	    <intent-filter>
-	        <action android:name="com.drinviewer.droiddrinviewer.DiscoverServerService" />
-	    </intent-filter>
-	</service>
+        
+        <service
+            android:name="com.drinviewer.droiddrinviewer.DiscoverServerService"
+            android:exported="false"
+            android:icon="@drawable/ic_launcher"
+            android:label="@string/discover_server_servicename"
+            android:process=":drinviewerdiscovery" >
+            <intent-filter>
+                <action android:name="com.drinviewer.droiddrinviewer.DiscoverServerService" />
+                <!-- 
+                <action android:name="@string/broadcast_startdiscovery"/>
+                <action android:name="@string/broadcast_cleanhostcollection"/>
+                -->
+            </intent-filter>
+        </service>
 	
     </application>
 </manifest>

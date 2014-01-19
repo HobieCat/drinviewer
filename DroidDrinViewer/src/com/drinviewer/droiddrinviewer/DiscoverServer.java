@@ -63,6 +63,11 @@ public class DiscoverServer implements Runnable {
 	private String uuid = null;
 	
 	/**
+	 * the wifiBroadcastAddress
+	 */
+	private String wifiBroadcastAddress;
+	
+	/**
 	 * constructor, just sets the serverCollection
 	 * 
 	 * @param serverCollection the HostCollection object to be filled
@@ -70,6 +75,7 @@ public class DiscoverServer implements Runnable {
 	 */
 	public DiscoverServer(DrinHostCollection serverCollection) {
 		this.serverCollection = serverCollection;
+		this.wifiBroadcastAddress = Constants.BROADCAST_ADDRESS;
 	}
 	
 	/**
@@ -77,111 +83,113 @@ public class DiscoverServer implements Runnable {
 	 */
 	@Override
 	public void run() {
-		try {
-			// build the datas to be sent	
-			byte[] sendData = (Constants.DISCOVER_REQUEST+Constants.MESSAGE_CHAR_SEPARATOR+uuid).getBytes();
-			// build the packet to be sent
-			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(Constants.BROADCAST_ADDRESS), port);
-			// build the socket to be used for sending what's been built
-			DatagramSocket socket = new DatagramSocket();
-			socket.setBroadcast(true);
-			
-			// declare the receive buffer
-			byte[] recvBuf = null;
-			// declare the receiver DatagramPacket
-			DatagramPacket receivePacket = null;
-			
-			running = uuid!=null;
-			
-			int loopNumber = 0;
-			boolean packetSentInThisLoop = false;
-			
-			if (running) {
-				recvBuf = new byte[Constants.BUFLEN];				
-			}
-			
-			while (running) {
-				try {
-					// send the broadcast out if needed
-					if (!packetSentInThisLoop) {
-						socket.send(sendPacket);
-						packetSentInThisLoop = true;
-						// print a message to the user
-						System.out.println(getClass().getName()+">>> Request packet sent to: " + Constants.BROADCAST_ADDRESS);
-					}
-					
-					// setup stuff and wait for a response
-					if (recvBuf!=null) {
-						if (receivePacket==null) receivePacket = new DatagramPacket(recvBuf, recvBuf.length);
-						else receivePacket.setData(recvBuf);
-						
-						socket.setSoTimeout(Constants.DISCOVER_TIMEOUT);
-						socket.receive(receivePacket);
-					}
-					
-					// we have a response here, since receive is blocking
-					// extract the response to a string and check if it's what we'd expected
-					String message = new String(receivePacket.getData()).trim();
-					
-					// so, if it's a DISCOVER_RESPONSE, do something with the received data			
-				    if (message.indexOf(Constants.DISCOVER_RESPONSE)==0) {
-				    	// initialize the responding server as unpaired
-				    	boolean isPaired = false;
-				    	// get the server host address
-						String serverHostAddress = receivePacket.getAddress().getHostAddress();
-						// for time being the server host name is its address
-						String serverHostName = serverHostAddress;
-						// split the received string using MESSAGE_CHAR_SEPARATOR to look for the server name
-						String temp[] = message.split(Constants.MESSAGE_CHAR_SEPARATOR);
-						// if the splitted array has more than two elements, there's the host name in the received message
-						// the paired parameter is (should be) always there, but double check it						
-						if (temp.length>2) serverHostName = temp[2];
-						if (temp.length>1) isPaired = temp[1].equals(Constants.MESSAGE_DEVICE_IS_PAIRED);
-						// add the the hostname and IP address to the list of discovered servers
-						serverCollection.put(new DrinHostData(serverHostName,serverHostAddress,isPaired));
-					  }
-				    
-				    message = null;
-				    
-					/**
-					 *  USE THE FOLLOWING CODE IF AN ARRAY OF DATA IS TO BE RECEIVED IN A SUBSEQUENT PACKET
-					 */
-				    
-				    /*
-	 			    c.receive(receivePacket);
-					  
-					// deserialize
-					ByteArrayInputStream in = new ByteArrayInputStream(receivePacket.getData());
-					    
-				    String[] mydata = null;
-					    
-					try {
-						mydata = (String[]) new ObjectInputStream(in).readObject();
-					} catch (ClassNotFoundException e) {					
-						e.printStackTrace();
-					}
-					    
-					if (mydata!=null) {
-						for (String mystr : mydata)
-						{
-							System.out.println(mystr);
-						}
-					} else System.out.println("mydata is null :(");
-	 			    */
-				    
-				} catch (SocketTimeoutException e) {
-					if (++loopNumber >= Constants.DISCOVERY_BROADCAST_COUNT) {
-						// print a message to the user
-						System.out.println(getClass().getName()+">>> DONE DISCOVERY.");
-						// self terminate
-						terminate();
-					} else packetSentInThisLoop = false;
+		if (wifiBroadcastAddress != null) {
+			try {
+				// build the data to be sent	
+				byte[] sendData = (Constants.DISCOVER_REQUEST+Constants.MESSAGE_CHAR_SEPARATOR+uuid).getBytes();
+				// build the packet to be sent
+				DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(wifiBroadcastAddress), port);
+				// build the socket to be used for sending what's been built
+				DatagramSocket socket = new DatagramSocket();
+				socket.setBroadcast(true);
+				
+				// declare the receive buffer
+				byte[] recvBuf = null;
+				// declare the receiver DatagramPacket
+				DatagramPacket receivePacket = null;
+				
+				running = uuid!=null;
+				
+				int loopNumber = 0;
+				boolean packetSentInThisLoop = false;
+				
+				if (running) {
+					recvBuf = new byte[Constants.BUFLEN];				
 				}
+				
+				while (running) {
+					try {
+						// send the broadcast out if needed
+						if (!packetSentInThisLoop) {
+							socket.send(sendPacket);
+							packetSentInThisLoop = true;
+							// print a message to the user
+							System.out.println(getClass().getName()+">>> Request packet sent to: " + wifiBroadcastAddress);
+						}
+						
+						// setup stuff and wait for a response
+						if (recvBuf!=null) {
+							if (receivePacket==null) receivePacket = new DatagramPacket(recvBuf, recvBuf.length);
+							else receivePacket.setData(recvBuf);
+							
+							socket.setSoTimeout(Constants.DISCOVER_TIMEOUT);
+							socket.receive(receivePacket);
+						}
+						
+						// we have a response here, since receive is blocking
+						// extract the response to a string and check if it's what we'd expected
+						String message = new String(receivePacket.getData()).trim();
+						
+						// so, if it's a DISCOVER_RESPONSE, do something with the received data			
+					    if (message.indexOf(Constants.DISCOVER_RESPONSE)==0) {
+					    	// initialize the responding server as unpaired
+					    	boolean isPaired = false;
+					    	// get the server host address
+							String serverHostAddress = receivePacket.getAddress().getHostAddress();
+							// for time being the server host name is its address
+							String serverHostName = serverHostAddress;
+							// split the received string using MESSAGE_CHAR_SEPARATOR to look for the server name
+							String temp[] = message.split(Constants.MESSAGE_CHAR_SEPARATOR);
+							// if the splitted array has more than two elements, there's the host name in the received message
+							// the paired parameter is (should be) always there, but double check it						
+							if (temp.length>2) serverHostName = temp[2];
+							if (temp.length>1) isPaired = temp[1].equals(Constants.MESSAGE_DEVICE_IS_PAIRED);
+							// add the the hostname and IP address to the list of discovered servers
+							serverCollection.put(new DrinHostData(serverHostName,serverHostAddress,isPaired));
+						  }
+					    
+					    message = null;
+					    
+						/**
+						 *  USE THE FOLLOWING CODE IF AN ARRAY OF DATA IS TO BE RECEIVED IN A SUBSEQUENT PACKET
+						 */
+					    
+					    /*
+		 			    c.receive(receivePacket);
+						  
+						// deserialize
+						ByteArrayInputStream in = new ByteArrayInputStream(receivePacket.getData());
+						    
+					    String[] mydata = null;
+						    
+						try {
+							mydata = (String[]) new ObjectInputStream(in).readObject();
+						} catch (ClassNotFoundException e) {					
+							e.printStackTrace();
+						}
+						    
+						if (mydata!=null) {
+							for (String mystr : mydata)
+							{
+								System.out.println(mystr);
+							}
+						} else System.out.println("mydata is null :(");
+		 			    */
+					    
+					} catch (SocketTimeoutException e) {
+						if (++loopNumber >= Constants.DISCOVERY_BROADCAST_COUNT) {
+							// print a message to the user
+							System.out.println(getClass().getName()+">>> DONE DISCOVERY.");
+							// self terminate
+							terminate();
+						} else packetSentInThisLoop = false;
+					}
+				}
+				// we're terminating here and out of the while loop, close the socket and terminate
+				if (socket!=null) socket.close();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
-			// we're terminating here and out of the while loop, close the socket and terminate
-			if (socket!=null) socket.close();
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 	}
 	
@@ -201,7 +209,7 @@ public class DiscoverServer implements Runnable {
 	 * @access public
 	 */
 	public void terminate() {
-		 serverCollection.notifyProducerHasStopped();
+		serverCollection.notifyProducerHasStopped();
 		running = false;
 	}
 	
@@ -220,5 +228,14 @@ public class DiscoverServer implements Runnable {
 	 */
 	public void connectOnPort(int port) {
 		this.port = port;
+	}
+
+	/**
+	 * wifiBroadcastAddress setter
+	 * 
+	 * @param wifiBroadcastAddress the address to set
+	 */
+	public void setBroadcastAddress(String wifiBroadcastAddress) {
+		this.wifiBroadcastAddress = wifiBroadcastAddress;
 	}
 }

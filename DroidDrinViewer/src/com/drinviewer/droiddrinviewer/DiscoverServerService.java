@@ -38,12 +38,24 @@ public class DiscoverServerService extends Service {
 	//TODO Remove this
 	private final static String TAG = DiscoverServerService.class.getSimpleName();
 	
+	/**
+	 * Object used to synchronize when clients request the hostCollection
+	 */
 	private final Object discoverLock = new Object();
 	
-	private DrinHostCollection hostCollection = new DrinHostCollection(); // search results
+	/**
+	 * The stored, most up-to-dated DrinHostCollection
+	 */
+	private DrinHostCollection hostCollection = new DrinHostCollection();
 	
+	/**
+	 * A list of remote callbacks to communicate with the service
+	 */
 	private RemoteCallbackList<DiscoverServerListener> listeners = new RemoteCallbackList<DiscoverServerListener>();
 	
+	/**
+	 * true if a discoery process is running
+	 */
 	private boolean isRunning = false;
 	
 	private DiscoverServerApi.Stub discoverAPI = new DiscoverServerApi.Stub() {
@@ -69,21 +81,19 @@ public class DiscoverServerService extends Service {
 		public boolean isRunning() throws RemoteException {
 			return isRunning;
 		}
+
+		@Override
+		public void updatePairState(int position, boolean pairState) throws RemoteException {
+				Log.d(TAG,"Setting paired# "+position+"to: "+pairState);
+				hostCollection.setPaired(hostCollection.get(position), pairState);
+		}
 	};
 	
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.i(TAG,"action="+intent.getAction());
 		if (intent.getAction().equals(getResources().getString(R.string.broadcast_startdiscovery))) {
-			Log.i(TAG,"Starting discoverTask");
-			// discoverTask.start();
-			new Thread () {
-				@Override
-				public void run() {
-					runDiscover();
-				}
-			}.start();			
+			runDiscover();		
 		} else if (intent.getAction().equals(getResources().getString(R.string.broadcast_cleanhostcollection))) {
 			hostCollection.init();
 		}
@@ -92,14 +102,13 @@ public class DiscoverServerService extends Service {
 	
 	private void runDiscover () {
 		try {
-			/**
-			 * Sends a (sort of) discovery started event to all listeners
-			 */
 			isRunning = true;
-			
+
+			/**
+			 * Sends a discovery started event to all listeners
+			 */
 			int N  = listeners.beginBroadcast();
-			for (int i=0; i<N; i++)
-			{
+			for (int i=0; i<N; i++) {
 				listeners.getBroadcastItem(i).onHostDiscoveryStarted();
 			}
 			listeners.finishBroadcast();
@@ -109,12 +118,32 @@ public class DiscoverServerService extends Service {
 			ds.setUUID(DrinViewerApplication.getInstallationUUID());
 
 			synchronized (discoverLock) {
-				hostCollection = ds.doDiscover();
+				new Thread(ds).start();
+				/*
+				 * following called methods are both synchronized
+				 * so that they should return as soon as an host
+				 * is found and added to the hostCollection or
+				 * the timeout is reached
+				 */
+				while (hostCollection.isProducerRunning()) {
+					DrinHostData hs = hostCollection.getLast();
+					
+					/**
+					 * Sends a host discovered event to all listeners
+					 */
+					N  = listeners.beginBroadcast();
+					for (int i=0; i<N; i++) {
+						if (hs != null) listeners.getBroadcastItem(i).onHostDiscovered(hs);
+					}
+					listeners.finishBroadcast();
+				}
 			}
 			
+			/**
+			 * Sends a discovery done event to all listeners
+			 */
 			N  = listeners.beginBroadcast();
-			for (int i=0; i<N; i++)
-			{
+			for (int i=0; i<N; i++) {
 				listeners.getBroadcastItem(i).onHostDiscoveryDone();
 			}
 			listeners.finishBroadcast();
@@ -127,27 +156,18 @@ public class DiscoverServerService extends Service {
 		}
 	}
 
-//	@Override
-//	public void onCreate() {
-//		super.onCreate();
-//		Log.i(TAG, "Service creating");
-//	}
-
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		Log.i(TAG, "Service destroying");
 		listeners.kill(); // TODO check this
 	}
 
 	@Override
 	public IBinder onBind(Intent intent) {
 		if (DiscoverServerService.class.getName().equals(intent.getAction())) {
-			Log.d(TAG, "Bound by intent " + intent);
 			return discoverAPI;
 		} else {
 			return null;
 		}
 	}
-
 }

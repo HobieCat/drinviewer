@@ -40,14 +40,12 @@ public class DrinHostAdapter extends BaseAdapter {
 	/**
 	 * Main activity context
 	 * 
-	 * @var Context
 	 */
 	private Context context;
 	
 	/**
 	 * DrinHostCollection to be displayed
 	 * 
-	 * @var DrinHostCollection
 	 */
 	private DrinHostCollection hostCollection;
 
@@ -80,14 +78,16 @@ public class DrinHostAdapter extends BaseAdapter {
 	
 	/**
 	 * Sets the DrinHostCollection to be displayed
+	 * 
 	 * @param c the collection to be displayed
 	 */
 	public void setHostCollection (DrinHostCollection c) {
 		hostCollection = c;
 	}
 	
-	
 	/**
+	 * hostCollection getter
+	 * 
 	 * @return the hostCollection
 	 */
 	public DrinHostCollection getHostCollection() {

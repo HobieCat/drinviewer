@@ -23,6 +23,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.drinviewer.common.HostCollection;
+import com.drinviewer.common.HostData;
 
 /**
  * Host collection class for Android app
@@ -57,6 +58,32 @@ public class DrinHostCollection extends HostCollection implements Parcelable {
 	public DrinHostCollection() {
 		super();
 	}
+	
+	/**
+	 * Overridden getLast method to return a DrinHostData Object
+	 */
+	@Override
+	public DrinHostData getLast() {
+		HostData hs = super.getLast();
+		if (hs != null) return new DrinHostData(hs.hostname, hs.address, hs.isPaired);		
+		else return null;
+	}
+	
+	/**
+	 * Overridden setPaired method to set a DrinHostData Object from a HostData
+	 * 
+	 * @param element the HostData Object to be paired or unpaired
+	 * @param isPaired the value to be set
+	 */
+	@Override
+	public void setPaired (HostData element, boolean isPaired)
+	{
+		if (isInList(element))
+		{
+			int index = hostList.indexOf(element);
+			hostList.set(index, new DrinHostData(element.hostname, element.address, isPaired));
+		}
+	}
 
 	/**
 	 * constructor from a parcel Object
@@ -66,15 +93,6 @@ public class DrinHostCollection extends HostCollection implements Parcelable {
 	@SuppressWarnings("unchecked")
 	public DrinHostCollection(Parcel parcel) {
 		setHostList(parcel.readArrayList(DrinHostCollection.class.getClassLoader()));
-	}
-
-	/**
-	 * puts an item in the collection
-	 * 
-	 * @param element the DrinHostData to be added
-	 */
-	public void put(DrinHostData element) {
-		add (element);
 	}
 
 	@Override

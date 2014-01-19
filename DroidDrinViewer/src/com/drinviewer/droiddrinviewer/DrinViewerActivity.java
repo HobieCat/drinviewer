@@ -65,7 +65,7 @@ public class DrinViewerActivity extends FragmentActivity {
 
 		case R.id.menu_refresh:
 			ServerListFragment slFragment = (ServerListFragment) getSupportFragmentManager().findFragmentById(R.id.serverlistfragment);
- 			slFragment.doDiscover(true);
+ 			slFragment.doDiscover();
 			return true;
 		default:
 			return super.onOptionsItemSelected(item);

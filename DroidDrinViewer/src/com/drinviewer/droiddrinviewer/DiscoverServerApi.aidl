@@ -31,11 +31,10 @@ import com.drinviewer.droiddrinviewer.DrinHostCollection;
  */
 interface DiscoverServerApi {
 
-	DrinHostCollection getMostUpToDateCollection();
-	
-	void addListener(DiscoverServerListener listener);
 
+	DrinHostCollection getMostUpToDateCollection();
+	void addListener(DiscoverServerListener listener);
 	void removeListener(DiscoverServerListener listener);
-	
 	boolean isRunning();
+	void updatePairState (int position, boolean pairState);
 }

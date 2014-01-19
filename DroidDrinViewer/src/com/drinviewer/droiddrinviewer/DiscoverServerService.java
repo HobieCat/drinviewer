@@ -21,6 +21,7 @@ package com.drinviewer.droiddrinviewer;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
@@ -89,21 +90,37 @@ public class DiscoverServerService extends Service {
 		}
 	};
 	
-	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		if (intent.getAction().equals(getResources().getString(R.string.broadcast_startdiscovery))) {
-			runDiscover();		
+			// get the wifiBroadcastAddress from intent extra
+			String wifiBroadcastAddress = null;
+			Bundle b = intent.getExtras();
+			if (b != null) {
+				wifiBroadcastAddress = b.getString("wifiBroadcastAddress");				
+			}
+			runDiscover(wifiBroadcastAddress);		
 		} else if (intent.getAction().equals(getResources().getString(R.string.broadcast_cleanhostcollection))) {
 			hostCollection.init();
+			/**
+			 * Sends a host init event to all listeners
+			 */
+			try {
+				int N  = listeners.beginBroadcast();
+				for (int i=0; i<N; i++) {
+					listeners.getBroadcastItem(i).onHostCollectionInit();
+				}
+				listeners.finishBroadcast();
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
 		}
 		return Service.START_NOT_STICKY;
 	}
 	
-	private void runDiscover () {
+	private void runDiscover (String wifiBroadcastAddress) {
 		try {
 			isRunning = true;
-
 			/**
 			 * Sends a discovery started event to all listeners
 			 */
@@ -116,6 +133,7 @@ public class DiscoverServerService extends Service {
 			hostCollection.init();
 			DiscoverServer ds = new DiscoverServer(hostCollection);
 			ds.setUUID(DrinViewerApplication.getInstallationUUID());
+			if (wifiBroadcastAddress != null) ds.setBroadcastAddress (wifiBroadcastAddress);
 
 			synchronized (discoverLock) {
 				new Thread(ds).start();

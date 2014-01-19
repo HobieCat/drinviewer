@@ -50,7 +50,7 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 	 * Notification counter, for debugging purposes
 	 */
 	// TODO: remove it in final version
-	private static int count=1;
+	private static int count=0;
 	
 	
 	@Override
@@ -96,34 +96,34 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 	    		 intent.getAction().equals(context.getResources().getString(R.string.broadcast_cleanhostcollection))) {
 	    	/**
 	    	 * Calls the DiscoverServerService asking to do a discovery
-	    	 *  or a clean host collection by simply forwarding the received action
+	    	 * or a clean host collection by simply forwarding the received action
 	    	 */
     		Intent service = new Intent(context, DiscoverServerService.class);
     		service.setAction(intent.getAction());
     		context.startService(service);
-//    		context.sendBroadcast(service);
+    		context.sendBroadcast(service);
     		
             // sets text of the notification
     		// TODO: remove these 3 in final version    		
     		if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startdiscovery))) notificationText.append("Started discovery");
     		else notificationText.append("Perform list clean");
     		sendNotify = true; 
-//	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startalarmrepeater))) {
-//	    	/**
-//	    	 * start the alarm repeater only if wifi is connected already
-//	    	 * used by ServerListFragmend.onServiceConnected method to start the discovery
-//	    	 * if the application is launched being already connected to a WiFi network
-//	    	 */
-//	    	ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-//	    	NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-//	    	
-//	    	if (mWifi.isConnected()) isStarted = startAlarmRepeater(context);
-//            
-//            // sets text of the notification
-//    		// TODO: remove these 2 in final version	            
-//            notificationText.append( "Alarm start, started="+isStarted );
-//            sendNotify = true;
-//	    	
+	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startalarmrepeater))) {
+	    	/**
+	    	 * start the alarm repeater only if WiFi is connected already
+	    	 * used by ServerListFragment.onServiceConnected method to start the discovery
+	    	 * if the application is launched being already connected to a WiFi network
+	    	 */
+	    	ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+	    	NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+	    	
+	    	if (mWifi.isConnected()) isStarted = startAlarmRepeater(context);
+            
+            // sets text of the notification
+    		// TODO: remove these 2 in final version	            
+            notificationText.append( "Alarm start, started="+isStarted );
+            sendNotify = true;
+	    	
 //	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_stopalarmrepeater))) {
 //	    	/**
 //	    	 *  stop the alarm repeater. period.
@@ -172,11 +172,11 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 		
 		// Get the alarm manager
 		AlarmManager service = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-//		// Instantiate the intent and set its action
+		// Instantiate the intent and set its action
 		Intent i = new Intent(context, this.getClass());
 		i.setAction(context.getResources().getString(R.string.broadcast_startdiscovery));
-//		// Get the broadcast
-//		// TODO: consider using FLAG_UPDATE_CURRENT
+		// Get the broadcast
+		// TODO: consider using FLAG_UPDATE_CURRENT
 		PendingIntent pending = PendingIntent.getBroadcast(context, 0, i, PendingIntent.FLAG_CANCEL_CURRENT);
 		if (pending!=null) {
 			Calendar cal = Calendar.getInstance();
@@ -187,12 +187,12 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 		}
 		return returnValue;
 	}
-//	
-//	/**
-//	 * Stops the alarm repeater after a disconnection from a WiFi network
-//	 * 
-//	 * @param context  The context to use
-//	 */
+	
+	/**
+	 * Stops the alarm repeater after a disconnection from a WiFi network
+	 * 
+	 * @param context  The context to use
+	 */
 	private void stopAlarmRepeater(Context context) {
 		/**
 		 * Sends a message to clean the host collection,
@@ -202,9 +202,11 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 		i.setAction(context.getResources().getString(R.string.broadcast_cleanhostcollection));
 		context.sendBroadcast(i);
 		
-		// Cancel the pending intent from the AlarmManager, reusing the same Intent i
-		// NOTE: This does not fires a start discover, just setting the same action
-		//       used in startAlarmRepeater
+		/**
+		 * Cancel the pending intent from the AlarmManager, reusing the same Intent i
+		 * NOTE: This does not fires a start discover, just setting the same action
+		 * used in startAlarmRepeater
+		 */
 		i.setAction(context.getResources().getString(R.string.broadcast_startdiscovery));
 		PendingIntent senderstop = PendingIntent.getBroadcast(context, 0, i, 0);
 		AlarmManager alarmManagerstop = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);

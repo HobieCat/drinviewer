@@ -20,6 +20,8 @@
 
 package com.drinviewer.droiddrinviewer;
 
+import com.drinviewer.droiddrinviewer.DrinHostData;
+
 /**
  * DiscoverServerListener Interface definition
  * 
@@ -29,8 +31,8 @@ package com.drinviewer.droiddrinviewer;
 
 oneway interface DiscoverServerListener {
 
-	void handleHostCollectionUpdated();
 	void onHostDiscoveryStarted();
 	void onHostDiscoveryDone();
+	void onHostDiscovered(in DrinHostData hostData);
 	
 }

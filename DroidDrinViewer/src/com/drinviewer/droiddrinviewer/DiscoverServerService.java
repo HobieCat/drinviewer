@@ -44,6 +44,8 @@ public class DiscoverServerService extends Service {
 	
 	private RemoteCallbackList<DiscoverServerListener> listeners = new RemoteCallbackList<DiscoverServerListener>();
 	
+	private boolean isRunning = false;
+	
 	private DiscoverServerApi.Stub discoverAPI = new DiscoverServerApi.Stub() {
 
 		@Override
@@ -61,6 +63,11 @@ public class DiscoverServerService extends Service {
 		@Override
 		public void removeListener(DiscoverServerListener listener) throws RemoteException {
 			if (listener != null) listeners.unregister(listener);
+		}
+
+		@Override
+		public boolean isRunning() throws RemoteException {
+			return isRunning;
 		}
 	};
 	
@@ -88,6 +95,7 @@ public class DiscoverServerService extends Service {
 			/**
 			 * Sends a (sort of) discovery started event to all listeners
 			 */
+			isRunning = true;
 			
 			int N  = listeners.beginBroadcast();
 			for (int i=0; i<N; i++)
@@ -114,7 +122,9 @@ public class DiscoverServerService extends Service {
 			Log.d(TAG, "size=" + hostCollection.size());
 		} catch (Throwable t) {
 			Log.e(TAG, "Failed to retrieve the hostCollection:", t);
-		}		
+		} finally {
+			isRunning = false;
+		}
 	}
 
 //	@Override

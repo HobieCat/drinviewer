@@ -36,4 +36,6 @@ interface DiscoverServerApi {
 	void addListener(DiscoverServerListener listener);
 
 	void removeListener(DiscoverServerListener listener);
+	
+	boolean isRunning();
 }

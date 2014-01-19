@@ -34,5 +34,6 @@ oneway interface DiscoverServerListener {
 	void onHostDiscoveryStarted();
 	void onHostDiscoveryDone();
 	void onHostDiscovered(in DrinHostData hostData);
+	void onHostCollectionInit();
 	
 }

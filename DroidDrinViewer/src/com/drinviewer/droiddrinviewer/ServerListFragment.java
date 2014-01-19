@@ -106,6 +106,15 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 				((DrinViewerActivity) getActivity()).getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_SERVER_FOUND);
 			}
 		}
+
+		@Override
+		public void onHostCollectionInit() throws RemoteException {
+			getAdapter().initHostCollection();
+			
+			if (mustUpdateUI) {
+				((DrinViewerActivity) getActivity()).getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_SERVER_FOUND);
+			}
+		}
 	}; 
 	
 	/**

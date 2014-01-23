@@ -19,6 +19,10 @@
  */
 package com.drinviewer.droiddrinviewer;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import android.app.Service;
 import android.content.Intent;
 import android.os.Bundle;
@@ -92,6 +96,9 @@ public class DiscoverServerService extends Service {
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		
+		Log.d("onStartCommand","action: "+intent.getAction());
+		
 		if (intent.getAction().equals(getResources().getString(R.string.broadcast_startdiscovery))) {
 			// get the wifiBroadcastAddress from intent extra
 			String wifiBroadcastAddress = null;
@@ -99,21 +106,13 @@ public class DiscoverServerService extends Service {
 			if (b != null) {
 				wifiBroadcastAddress = b.getString("wifiBroadcastAddress");				
 			}
-			runDiscover(wifiBroadcastAddress);		
+			if (wifiBroadcastAddress != null) runDiscover(wifiBroadcastAddress);		
 		} else if (intent.getAction().equals(getResources().getString(R.string.broadcast_cleanhostcollection))) {
 			hostCollection.init();
 			/**
 			 * Sends a host init event to all listeners
 			 */
-			try {
-				int N  = listeners.beginBroadcast();
-				for (int i=0; i<N; i++) {
-					listeners.getBroadcastItem(i).onHostCollectionInit();
-				}
-				listeners.finishBroadcast();
-			} catch (Throwable t) {
-				t.printStackTrace();
-			}
+			sendBroadcastToListeners(DroidDrinViewerConstants.COLLECTION_INIT);
 		}
 		return Service.START_NOT_STICKY;
 	}
@@ -124,47 +123,45 @@ public class DiscoverServerService extends Service {
 			/**
 			 * Sends a discovery started event to all listeners
 			 */
-			int N  = listeners.beginBroadcast();
-			for (int i=0; i<N; i++) {
-				listeners.getBroadcastItem(i).onHostDiscoveryStarted();
-			}
-			listeners.finishBroadcast();
+			sendBroadcastToListeners(DroidDrinViewerConstants.DISCOVERY_STARTED);
 			
 			hostCollection.init();
+			
+			// fake host for debugging purposes
+			// TODO remove these 3 in final version
+			DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+			Date date = new Date();			
+			hostCollection.put(new DrinHostData(dateFormat.format(date), wifiBroadcastAddress, false));
+			
 			DiscoverServer ds = new DiscoverServer(hostCollection);
 			ds.setUUID(DrinViewerApplication.getInstallationUUID());
+			
 			if (wifiBroadcastAddress != null) ds.setBroadcastAddress (wifiBroadcastAddress);
 
 			synchronized (discoverLock) {
+				// start the discoverServer thread
 				new Thread(ds).start();
-				/*
-				 * following called methods are both synchronized
-				 * so that they should return as soon as an host
-				 * is found and added to the hostCollection or
-				 * the timeout is reached
+				
+				/**
+				 * following called methods:
+				 * - isProducerRunning
+				 * - getLast
+				 * are both synchronized, so that they should return as soon as an
+				 * host is found and added to the hostCollection or the timeout is reached
 				 */
 				while (hostCollection.isProducerRunning()) {
-					DrinHostData hs = hostCollection.getLast();
-					
+					DrinHostData hs = hostCollection.getLast();					
 					/**
 					 * Sends a host discovered event to all listeners
 					 */
-					N  = listeners.beginBroadcast();
-					for (int i=0; i<N; i++) {
-						if (hs != null) listeners.getBroadcastItem(i).onHostDiscovered(hs);
-					}
-					listeners.finishBroadcast();
+					sendBroadcastToListeners(DroidDrinViewerConstants.HOST_DISCOVERED, hs);
 				}
 			}
 			
 			/**
 			 * Sends a discovery done event to all listeners
 			 */
-			N  = listeners.beginBroadcast();
-			for (int i=0; i<N; i++) {
-				listeners.getBroadcastItem(i).onHostDiscoveryDone();
-			}
-			listeners.finishBroadcast();
+			sendBroadcastToListeners(DroidDrinViewerConstants.DISCOVERY_DONE);
 			
 			Log.d(TAG, "size=" + hostCollection.size());
 		} catch (Throwable t) {
@@ -177,7 +174,7 @@ public class DiscoverServerService extends Service {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		listeners.kill(); // TODO check this
+		listeners.kill();
 	}
 
 	@Override
@@ -186,6 +183,40 @@ public class DiscoverServerService extends Service {
 			return discoverAPI;
 		} else {
 			return null;
+		}
+	}
+	
+	/**
+	 * send the broadcast to all registered listeners
+	 * 
+	 * @param what int representing which broadcast to send
+	 * @param params the DrinHostData associated to a HOST_DISCOVERED event
+	 */
+	private void sendBroadcastToListeners (int what, Object...params) {
+		try {
+			int N = listeners.beginBroadcast();
+			for (int i=0; i<N; i++) {
+				switch (what) {
+				case DroidDrinViewerConstants.COLLECTION_INIT:
+					listeners.getBroadcastItem(i).onHostCollectionInit();
+					break;
+				case DroidDrinViewerConstants.DISCOVERY_STARTED:
+					listeners.getBroadcastItem(i).onHostDiscoveryStarted();
+					break;
+				case DroidDrinViewerConstants.HOST_DISCOVERED:
+					if (params.length == 1)
+					{
+						listeners.getBroadcastItem(i).onHostDiscovered((DrinHostData) params[0]);
+					}
+					break;
+				case DroidDrinViewerConstants.DISCOVERY_DONE:
+					listeners.getBroadcastItem(i).onHostDiscoveryDone();
+					break;				
+				}
+			}
+			listeners.finishBroadcast();
+		} catch (Throwable t) {
+			t.printStackTrace();
 		}
 	}
 }

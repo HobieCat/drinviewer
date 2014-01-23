@@ -51,19 +51,22 @@ import android.util.Log;
  *
  */
 public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
-	/**
-	 * String for the broadcast address of the WiFi
-	 * interface, is refreshed on every re-connection 
-	 */
-	private String wifiBroadcastAddress = null;
-	
-	
+
 	/**
 	 * Notification counter, for debugging purposes
 	 */
 	// TODO: remove it in final version
 	private static int count=0;
 	
+	/**
+	 * used to repeat the discovery at fixed time intervals
+	 */
+	private AlarmManager alarmManager;
+	
+	/**
+	 * broadcast IP as a string, as returned from the DHCP
+	 */
+	private String wifiBroadcastAddress = null;
 	
 	@Override
 	public void onReceive(Context context, Intent intent) {
@@ -75,6 +78,8 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 		boolean sendNotify = false;
 		boolean isStarted = false;
 		
+		Log.d("DrinViewerBroadcastReceiver.onReceive","action: "+intent.getAction());
+		
 		if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
 	        NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
 	        if (networkInfo.isConnected()) {
@@ -83,22 +88,8 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 	        	 * address and start the discovery process
 	        	 * repeated at a fixed time interval
 	        	 */
-	        	WifiManager mWifi = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-	            DhcpInfo dhcp = mWifi.getDhcpInfo();
-	            	            
-				if (dhcp != null) {
-					int broadcast = (dhcp.ipAddress & dhcp.netmask) | ~dhcp.netmask;
-					byte[] quads = new byte[4];
-					for (int k = 0; k < 4; k++)
-						quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
-					
-					try {
-						wifiBroadcastAddress = InetAddress.getByAddress(quads).getHostAddress();
-					} catch (UnknownHostException e) {
-						e.printStackTrace();
-					}
-				}
-				Log.d("broadcastreceiver","broadcastaddress is "+ wifiBroadcastAddress);
+	        	wifiBroadcastAddress = getWiFiBroadcastAddress(context);
+				Log.d("broadcastreceiver","broadcastaddress is " + wifiBroadcastAddress );
 	            
 	            isStarted = startAlarmRepeater(context);
 	            
@@ -114,6 +105,7 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 	             * WiFi is disconnected, stop the discovery
 	             * process repeating, it would be a waste of resources
 	             */
+	        	wifiBroadcastAddress = null;
 	            stopAlarmRepeater(context);
 	            
 	            // sets text of the notification
@@ -130,11 +122,14 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 	    	 */
     		Intent service = new Intent(context, DiscoverServerService.class);
     		service.setAction(intent.getAction());
-    		Bundle b = intent.getExtras();
-    		if (b != null) {
-    			service.putExtra("wifiBroadcastAddress", b.getString("wifiBroadcastAddress"));
-    		} else {
-    			service.putExtra("wifiBroadcastAddress", wifiBroadcastAddress);
+    		
+    		if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startdiscovery))) {
+    			Bundle b = intent.getExtras();
+    			if (b != null) {
+        			service.putExtra("wifiBroadcastAddress", b.getString("wifiBroadcastAddress"));
+        		} else if (wifiBroadcastAddress != null) {
+        			service.putExtra("wifiBroadcastAddress", wifiBroadcastAddress);
+        		}
     		}
     		context.startService(service);
     		
@@ -152,24 +147,29 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 	    	ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
 	    	NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
 	    	
-	    	if (mWifi.isConnected()) isStarted = startAlarmRepeater(context);
+	    	if (mWifi.isConnected()) {
+	    		// if we're called from the activity, try to get a broadcast address
+	    		if (intent.getBooleanExtra("forcegetbroadcast", false)) wifiBroadcastAddress = getWiFiBroadcastAddress(context);	    		
+	    		isStarted = startAlarmRepeater(context);
+	    	} else {
+	    		wifiBroadcastAddress = null;
+	    	}
             
             // sets text of the notification
     		// TODO: remove these 2 in final version	            
             notificationText.append( "Alarm start, started="+isStarted );
             sendNotify = true;
+	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_stopalarmrepeater))) {
+	    	/**
+	    	 *  stop the alarm repeater. period.
+	    	 *  used by DrinViewerApplication.onTerminate method
+	    	 */
+	    	stopAlarmRepeater(context);
 	    	
-//	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_stopalarmrepeater))) {
-//	    	/**
-//	    	 *  stop the alarm repeater. period.
-//	    	 *  used by ServerListFragment.onDestroy method
-//	    	 */
-//	    	stopAlarmRepeater(context);
-//	    	
-//            // sets text of the notification
-//    		// TODO: remove these 2 in final version    
-//            notificationText.append( "Alarm stop, started="+isStarted );
-//            sendNotify = true;
+            // sets text of the notification
+    		// TODO: remove these 2 in final version    
+            notificationText.append( "Alarm stop" );
+            sendNotify = true;
 	    }
 		
 		// Handles the notification for debugging purposes
@@ -206,7 +206,7 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 		boolean returnValue = false;
 		
 		// Get the alarm manager
-		AlarmManager service = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+		if (alarmManager == null) alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 		// Instantiate the intent and set its action
 		Intent i = new Intent(context, this.getClass());
 		i.setAction(context.getResources().getString(R.string.broadcast_startdiscovery));
@@ -217,8 +217,10 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 		PendingIntent pending = PendingIntent.getBroadcast(context, 0, i, PendingIntent.FLAG_CANCEL_CURRENT);
 		if (pending!=null) {
 			Calendar cal = Calendar.getInstance();
+			// cancel the alarm
+			alarmManager.cancel(pending);
 			// Run the intent at fixed time intervals
-			service.setInexactRepeating(AlarmManager.RTC_WAKEUP,
+			alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP,
 					cal.getTimeInMillis(), DroidDrinViewerConstants.DISCOVER_REPEAT_TIME, pending);
 			returnValue = true;
 		}
@@ -246,7 +248,29 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 		 */
 		i.setAction(context.getResources().getString(R.string.broadcast_startdiscovery));
 		PendingIntent senderstop = PendingIntent.getBroadcast(context, 0, i, 0);
-		AlarmManager alarmManagerstop = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-		alarmManagerstop.cancel(senderstop);
+		// Get the alarm manager
+		if (alarmManager == null) alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+		alarmManager.cancel(senderstop);
+	}
+	
+	private String getWiFiBroadcastAddress (Context context) {
+		String bcastaddr = null;
+    	WifiManager mWifi = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+        DhcpInfo dhcp = mWifi.getDhcpInfo();
+        	            
+		if (mWifi.isWifiEnabled() && dhcp != null) {
+			int broadcast = (dhcp.ipAddress & dhcp.netmask) | ~dhcp.netmask;
+			byte[] quads = new byte[4];
+			for (int k = 0; k < 4; k++)
+				quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
+			
+			try {
+				bcastaddr = InetAddress.getByAddress(quads).getHostAddress();
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
+		}
+		Log.d ("getWiFiBroadcastAddress","address is: "+bcastaddr);
+		return bcastaddr;
 	}
 }

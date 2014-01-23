@@ -41,14 +41,12 @@ public class DiscoverServer implements Runnable {
 	/**
 	 * port number to open
 	 * 
-	 * @var int
 	 */
 	int port = Constants.PORT;
 	
 	/**
 	 * tells if the thread is running
 	 * 
-	 * @var boolean
 	 */ 
 	private volatile boolean running = false;
 	
@@ -68,6 +66,15 @@ public class DiscoverServer implements Runnable {
 	private String wifiBroadcastAddress;
 	
 	/**
+	 * timeout to set when discovering, as follows:
+	 * - start from Constants.DISCOVER_TIMEOUT
+	 * - if the timeout is reached, double it for the next packet
+	 * - if a packet is received, reset it to Constants.DISCOVER_TIMEOUT
+	 * - if the timeout exceeds DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT stop discovering
+	 */	
+	private int currentTimeOut;
+	
+	/**
 	 * constructor, just sets the serverCollection
 	 * 
 	 * @param serverCollection the HostCollection object to be filled
@@ -76,8 +83,9 @@ public class DiscoverServer implements Runnable {
 	public DiscoverServer(DrinHostCollection serverCollection) {
 		this.serverCollection = serverCollection;
 		this.wifiBroadcastAddress = Constants.BROADCAST_ADDRESS;
+		this.currentTimeOut = Constants.DISCOVER_TIMEOUT;
 	}
-	
+
 	/**
 	 * runs the actual discovery protocol
 	 */
@@ -100,7 +108,7 @@ public class DiscoverServer implements Runnable {
 				
 				running = uuid!=null;
 				
-				int loopNumber = 0;
+				int loopNumber = 1;
 				boolean packetSentInThisLoop = false;
 				
 				if (running) {
@@ -121,12 +129,23 @@ public class DiscoverServer implements Runnable {
 						if (recvBuf!=null) {
 							if (receivePacket==null) receivePacket = new DatagramPacket(recvBuf, recvBuf.length);
 							else receivePacket.setData(recvBuf);
-							
-							socket.setSoTimeout(Constants.DISCOVER_TIMEOUT);
+							System.out.println(getClass().getName()+">>> Setting timeout to: " + currentTimeOut);
+							// if for some reason the currentTimeOut becomes too big, terminate
+							if (currentTimeOut > DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT) {
+								terminate();
+								break;
+							}
+							socket.setSoTimeout(currentTimeOut);
+							System.out.println(getClass().getName()+">>> loop:"+loopNumber+" Waiting for a packet...");
 							socket.receive(receivePacket);
 						}
 						
 						// we have a response here, since receive is blocking
+						System.err.println(getClass().getName()+">>> ...got it! :)");
+						
+						// looks like network is responding, reset the socket timeout if it was increased
+						if (currentTimeOut > Constants.DISCOVER_TIMEOUT) currentTimeOut = Constants.DISCOVER_TIMEOUT;
+						
 						// extract the response to a string and check if it's what we'd expected
 						String message = new String(receivePacket.getData()).trim();
 						
@@ -145,7 +164,14 @@ public class DiscoverServer implements Runnable {
 							if (temp.length>2) serverHostName = temp[2];
 							if (temp.length>1) isPaired = temp[1].equals(Constants.MESSAGE_DEVICE_IS_PAIRED);
 							// add the the hostname and IP address to the list of discovered servers
-							serverCollection.put(new DrinHostData(serverHostName,serverHostAddress,isPaired));
+							DrinHostData foundHost = new DrinHostData(serverHostName,serverHostAddress,isPaired);
+							// if found host is not in the collection, add it and decrease the loop
+							// count so that this host does not count in the total timeout count
+							if (!serverCollection.isInList(foundHost)) {
+								System.err.println(getClass().getName()+">>> ADDING HOST");
+								serverCollection.put(foundHost);
+								loopNumber--;
+							}
 						  }
 					    
 					    message = null;
@@ -177,12 +203,21 @@ public class DiscoverServer implements Runnable {
 		 			    */
 					    
 					} catch (SocketTimeoutException e) {
-						if (++loopNumber >= Constants.DISCOVERY_BROADCAST_COUNT) {
+						// looks like network is slow on responding,
+						// increase the timeout for the next iterations
+							currentTimeOut += currentTimeOut;
+							System.err.println(getClass().getName()+">>> NEW TIME OUT: "+currentTimeOut);
+					} finally {
+						if (loopNumber >= Constants.DISCOVERY_BROADCAST_COUNT) {
 							// print a message to the user
-							System.out.println(getClass().getName()+">>> DONE DISCOVERY.");
-							// self terminate
+							System.err.println(getClass().getName()+">>> DONE DISCOVERY.");
+							// self terminate, sets running to false
 							terminate();
-						} else packetSentInThisLoop = false;
+						} else {
+							// send another broadcast and increase the loop counter
+							packetSentInThisLoop = false;
+							loopNumber++;
+						}
 					}
 				}
 				// we're terminating here and out of the while loop, close the socket and terminate

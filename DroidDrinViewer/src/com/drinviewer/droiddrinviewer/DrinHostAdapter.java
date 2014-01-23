@@ -66,13 +66,13 @@ public class DrinHostAdapter extends BaseAdapter {
 		ImageView iconPaired = (ImageView) rowView.findViewById(R.id.iconPaired);
 		
 		HostData data = hostCollection.get(position);
-		
-		serverNameLine.setText(data.hostname);
-		serverIPLine.setText(data.address);	
-		
-		iconPaired.setImageDrawable(context.getResources().getDrawable(
-				(data.isPaired) ? android.R.drawable.btn_star_big_on : android.R.drawable.btn_star_big_off ));
-		
+		if (data != null) {
+			serverNameLine.setText(data.hostname);
+			serverIPLine.setText(data.address);	
+			
+			iconPaired.setImageDrawable(context.getResources().getDrawable(
+					(data.isPaired) ? android.R.drawable.btn_star_big_on : android.R.drawable.btn_star_big_off ));
+		}
 		return rowView;		
 	}
 	

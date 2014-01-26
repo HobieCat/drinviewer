@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project basedir="." default="build" name="DesktopDrinViewer">
 	<taskdef name="swtjar" classname="org.swtjar.ant.SWTJarTask" classpath="./lib/swtjar.jar"/>
-	
+
 	<property name="CommonDrinViewer.location" value="../CommonDrinViewer"/>
+	<property name="DroidDrinViewer.location"  value="../DroidDrinViewer"/>
 	
+	 <property name="android-sdk-docs" value="./android-sdk/docs"/>
+
 	<property name="src.dir" location="src" />
 	<property name="build.dir" location="bin" />
 	<property name="dist.dir" location="dist" />
@@ -14,12 +17,16 @@
 	<property name="sqlite.version" value="3.7.2" />
 	<property name="debuglevel" value="source,lines,vars" />
 	<property name="linux.dist.dir" value="${dist.dir}/linux" />
+	<property name="win.dist.dir" value="${dist.dir}/win" />
+	<property name="osx.dist.dir" value="${dist.dir}/osx" />
 	<property name="multi.dist.dir" value="${dist.dir}/multi" />
-	
+	<property name="javasource" value="1.6" />
+	<property name="javatarget" value="1.6" />
+
 	<path id="CommonDrinViewer.classpath">
-        <pathelement location="${CommonDrinViewer.location}/bin"/>
-    </path>
-    
+		<pathelement location="${CommonDrinViewer.location}/bin"/>
+	</path>
+
 	<path id="DesktopDrinViewer.classpath">
 		<pathelement location="${build.dir}" />
 		<path refid="CommonDrinViewer.classpath"/>
@@ -29,22 +36,30 @@
 
 	<!-- Deletes the existing build, docs and dist directory-->
 	<target name="clean">
-		<ant antfile="build.xml" dir="${CommonDrinViewer.location}" inheritAll="false" target="clean"/>	    
+		<ant antfile="build.xml" dir="${CommonDrinViewer.location}" inheritAll="false" target="clean"/>
 		<delete dir="${build.dir}" />
 		<delete dir="${docs.dir}" />
 	</target>
-		
+
 	<target name="linux-clean">
 		<delete dir="${linux.dist.dir}" />
 	</target>
-	
+
+	<target name="win-clean">
+		<delete dir="${win.dist.dir}" />
+	</target>
+
+	<target name="osx-clean">
+		<delete dir="${osx.dist.dir}" />
+	</target>
+
 	<target name="multi-clean">
 		<delete dir="${multi.dist.dir}" />
 	</target>
 
 	<!-- Creates the  build, docs and dist directory-->
 	<target name="makedir">
-	    <ant antfile="build.xml" dir="${CommonDrinViewer.location}" inheritAll="false" target="makedir"/>
+		<ant antfile="build.xml" dir="${CommonDrinViewer.location}" inheritAll="false" target="makedir"/>
 		<mkdir dir="${build.dir}" />
 		<mkdir dir="${docs.dir}" />
 		<mkdir dir="${dist.dir}" />
@@ -65,11 +80,12 @@
 		</copy>
 	</target>
 
-	<!-- Compiles the java code -->
+	<!-- Compiles the java code, using linux 64? -->
 	<target name="compile" depends="clean, makedir, init">
-	    <ant antfile="build.xml" dir="${CommonDrinViewer.location}" inheritAll="false" target="compile"/>
-	    <echo message="${ant.project.name}: ${ant.file}"/>	
-		<javac debug="true" debuglevel="${debuglevel}" srcdir="${src.dir}" destdir="${build.dir}" includeantruntime="false">
+		<ant antfile="build.xml" dir="${CommonDrinViewer.location}" inheritAll="false" target="compile"/>
+		<echo message="${ant.project.name}: ${ant.file}"/>
+		<javac debug="true" debuglevel="${debuglevel}" srcdir="${src.dir}" destdir="${build.dir}" includeantruntime="false" 
+		    	target="${javatarget}" source="${javasource}" >
 			<src path="${src.dir}" />
 			<src path="${resources.dir}" />
 			<classpath refid="DesktopDrinViewer.classpath" />
@@ -77,34 +93,68 @@
 	</target>
 
 	<!-- Creates Javadoc -->
-	<target name="docs" depends="compile">
-	    <ant antfile="build.xml" dir="${CommonDrinViewer.location}" inheritAll="false" target="docs"/>
-	    
-		<javadoc packagenames="com.drinviewer.desktopdrinviewer,com.drinviewer.common" 
+	<target name="docs" depends="clean, makedir">
+		<javadoc packagenames="com.drinviewer.desktopdrinviewer, com.drinviewer.droiddrinviewer, com.drinviewer.common" 			
+			classpath="./android-sdk/platforms/android-14/android.jar;
+					   ${DroidDrinViewer.location}/libs/android-support-v4.jar;
+			           ${DroidDrinViewer.location}/libs/acra-4.5.0.jar"
+			linkoffline="http://d.android.com/reference ./android-sdk/docs/reference"
 		    destdir="${docs.dir}"
+			doctitle="The DrinvViewer Project Javadoc"
+			windowtitle="The DrinvViewer Project Javadoc"
 		    splitindex="true"
 		    author="true"
             version="true"
             private="true"
             bottom="DrinViewer is Free Sotfware. Copyright 2013-2014 Giorgio Consorti.">
-		    <classpath refid="DesktopDrinViewer.classpath" />
+			<classpath refid="DesktopDrinViewer.classpath" />
 			<!-- Define which files / directory should get included, we include all -->
+
 			<fileset dir="${CommonDrinViewer.location}/src">
 				<include name="**" />
 			</fileset>
 			<fileset dir="${src.dir}">
 				<include name="**" />
-			</fileset>						
+			</fileset>
+			
+			<fileset dir="${DroidDrinViewer.location}/src">
+				<include name="**" />
+				<exclude name="**/*.aidl" />
+			</fileset>
+			<fileset dir="${src.dir}">
+				<include name="**" />
+				<exclude name="**/*.aidl" />
+			</fileset>
+			
 		</javadoc>
 	</target>
 
 	<target name="build" depends="compile">
 		<description>Main target</description>
 	</target>
-	
-	<target name="build-jar-linux64" depends="build, linux-clean">
+
+	<!-- build for linux 32bit -->
+	<target name="build-jar-linux-32" depends="build">
+		<description>Builds jar containing swt for linux-32 only</description>
+		<jar destfile="${linux.dist.dir}/drinViewer.jar">
+			<manifest>
+				<attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader" />
+				<attribute name="Rsrc-Main-Class" value="com.drinviewer.desktopdrinviewer.DrinViewer" />
+				<attribute name="Class-Path" value="." />
+				<attribute name="Rsrc-Class-Path" value="./ sqlite-jdbc-${sqlite.version}.jar swt-linux32-${swt.version}.jar" />
+			</manifest>
+			<zipfileset src="jar-in-jar-loader.zip" />
+			<fileset dir="${build.dir}" />
+			<fileset dir="${CommonDrinViewer.location}/bin" />
+			<zipfileset dir="${lib.dir}" includes="sqlite-jdbc-${sqlite.version}.jar" />
+			<zipfileset dir="${lib.dir}" includes="swt-linux32-${swt.version}.jar" />
+		</jar>
+	</target>
+
+	<!-- build for linux 64bit -->
+	<target name="build-jar-linux-64" depends="build">
 		<description>Builds jar containing swt for linux-64 only</description>
-		<jar destfile="${dist.dir}/linux/drinViewer.jar">
+		<jar destfile="${linux.dist.dir}/drinViewer-x86_64.jar">
 			<manifest>
 				<attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader" />
 				<attribute name="Rsrc-Main-Class" value="com.drinviewer.desktopdrinviewer.DrinViewer" />
@@ -118,27 +168,116 @@
 			<zipfileset dir="${lib.dir}" includes="swt-linux64-${swt.version}.jar" />
 		</jar>
 	</target>
-	
-	<target name="build-jar-multiplatform" depends="build, multi-clean">
-		<description>Builds jar containing swt for all platforms</description>
-			<!-- Package cross platform SWT Jar -->
-			<swtjar jarfile="${dist.dir}/multi/drinViewer.jar"
-					targetmainclass="com.drinviewer.desktopdrinviewer.DrinViewer"
-					swtversion="${swt.version}">
-			  <!-- Application Classes -->
+
+	<target name="build-jar-linux" depends="linux-clean, build-jar-linux-32, build-jar-linux-64">
+		<description>Builds linux 32 and 64</description>
+	</target>
+
+	<!-- build for win 32bit -->
+	<target name="build-jar-win-32" depends="build">
+		<description>Builds jar containing swt for win-32 only</description>
+		<jar destfile="${win.dist.dir}/drinViewer.jar">
+			<manifest>
+				<attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader" />
+				<attribute name="Rsrc-Main-Class" value="com.drinviewer.desktopdrinviewer.DrinViewer" />
+				<attribute name="Class-Path" value="." />
+				<attribute name="Rsrc-Class-Path" value="./ sqlite-jdbc-${sqlite.version}.jar swt-win32-${swt.version}.jar" />
+			</manifest>
+			<zipfileset src="jar-in-jar-loader.zip" />
 			<fileset dir="${build.dir}" />
 			<fileset dir="${CommonDrinViewer.location}/bin" />
-			  
-			  <!-- Library Classes, gets unzipped inside the jar
+			<zipfileset dir="${lib.dir}" includes="sqlite-jdbc-${sqlite.version}.jar" />
+			<zipfileset dir="${lib.dir}" includes="swt-win32-${swt.version}.jar" />
+		</jar>
+	</target>
+
+	<!-- build for win 64bit -->
+	<target name="build-jar-win-64" depends="build">
+		<description>Builds jar containing swt for win-64 only</description>
+		<jar destfile="${win.dist.dir}/drinViewer-x86_64.jar">
+			<manifest>
+				<attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader" />
+				<attribute name="Rsrc-Main-Class" value="com.drinviewer.desktopdrinviewer.DrinViewer" />
+				<attribute name="Class-Path" value="." />
+				<attribute name="Rsrc-Class-Path" value="./ sqlite-jdbc-${sqlite.version}.jar swt-win64-${swt.version}.jar" />
+			</manifest>
+			<zipfileset src="jar-in-jar-loader.zip" />
+			<fileset dir="${build.dir}" />
+			<fileset dir="${CommonDrinViewer.location}/bin" />
+			<zipfileset dir="${lib.dir}" includes="sqlite-jdbc-${sqlite.version}.jar" />
+			<zipfileset dir="${lib.dir}" includes="swt-win64-${swt.version}.jar" />
+		</jar>
+	</target>
+
+	<target name="build-jar-win" depends="win-clean, build-jar-win-32, build-jar-win-64">
+		<description>Builds windows 32 and 64</description>
+	</target>
+
+	<!-- build for osx 32bit -->
+	<target name="build-jar-osx-32" depends="build">
+		<description>Builds jar containing swt for osx-32 only</description>
+		<jar destfile="${osx.dist.dir}/drinViewer.jar">
+			<manifest>
+				<attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader" />
+				<attribute name="Rsrc-Main-Class" value="com.drinviewer.desktopdrinviewer.DrinViewer" />
+				<attribute name="Class-Path" value="." />
+				<attribute name="Rsrc-Class-Path" value="./ sqlite-jdbc-${sqlite.version}.jar swt-osx32-${swt.version}.jar" />
+			</manifest>
+			<zipfileset src="jar-in-jar-loader.zip" />
+			<fileset dir="${build.dir}" />
+			<fileset dir="${CommonDrinViewer.location}/bin" />
+			<zipfileset dir="${lib.dir}" includes="sqlite-jdbc-${sqlite.version}.jar" />
+			<zipfileset dir="${lib.dir}" includes="swt-osx32-${swt.version}.jar" />
+		</jar>
+	</target>
+
+	<!-- build for osx 64bit -->
+	<target name="build-jar-osx-64" depends="build">
+		<description>Builds jar containing swt for osx-64 only</description>
+		<jar destfile="${osx.dist.dir}/drinViewer-x86_64.jar">
+			<manifest>
+				<attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader" />
+				<attribute name="Rsrc-Main-Class" value="com.drinviewer.desktopdrinviewer.DrinViewer" />
+				<attribute name="Class-Path" value="." />
+				<attribute name="Rsrc-Class-Path" value="./ sqlite-jdbc-${sqlite.version}.jar swt-osx64-${swt.version}.jar" />
+			</manifest>
+			<zipfileset src="jar-in-jar-loader.zip" />
+			<fileset dir="${build.dir}" />
+			<fileset dir="${CommonDrinViewer.location}/bin" />
+			<zipfileset dir="${lib.dir}" includes="sqlite-jdbc-${sqlite.version}.jar" />
+			<zipfileset dir="${lib.dir}" includes="swt-osx64-${swt.version}.jar" />
+		</jar>
+	</target>
+
+	<target name="build-jar-osx" depends="osx-clean, build-jar-osx-32, build-jar-osx-64">
+		<description>Builds osx 32 and 64</description>
+	</target>
+
+	<!--  build a single jar with swt for all platforms -->
+	<target name="build-jar-multiplatform" depends="build, multi-clean">
+		<description>Builds jar containing swt for all platforms</description>
+		<!-- Package cross platform SWT Jar -->
+		<swtjar jarfile="${dist.dir}/multi/drinViewer.jar"
+					targetmainclass="com.drinviewer.desktopdrinviewer.DrinViewer"
+					swtversion="${swt.version}">
+			<!-- Application Classes -->
+			<fileset dir="${build.dir}" />
+			<fileset dir="${CommonDrinViewer.location}/bin" />
+
+			<!-- Library Classes, gets unzipped inside the jar
 			  <zipfileset excludes="META-INF/*.MF" src="lib/miglayout-3.7.3.1-swt.jar"/>			  			  
 			  -->
-			  <zipfileset excludes="META-INF/*.MF" src="${lib.dir}/sqlite-jdbc-${sqlite.version}.jar"/>	
-			  <!--
+			<zipfileset excludes="META-INF/*.MF" src="${lib.dir}/sqlite-jdbc-${sqlite.version}.jar"/>
+			<!--
 			  	<fileset dir="${lib.dir}" includes="sqlite-jdbc-${sqlite.version}.jar"/>
 			  -->
-			  <!-- SWT Jars -->			  			
-			  <fileset dir="${lib.dir}" includes="swt-*-${swt.version}.jar" />				
-			</swtjar>		
+			<!-- SWT Jars -->
+			<fileset dir="${lib.dir}" includes="swt-*-${swt.version}.jar" />
+		</swtjar>
+	</target>
+
+	<target name="build-all-jar" depends="build-jar-win, build-jar-osx, build-jar-linux, build-jar-multiplatform">
+		<description>Builds all JARs</description>
 	</target>
 
 </project>

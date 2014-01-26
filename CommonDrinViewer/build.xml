@@ -29,7 +29,6 @@
     <!-- Creates the  build, docs and dist directory-->
 	<target name="makedir">
 		<mkdir dir="${build.dir}" />
-		<mkdir dir="${docs.dir}" />
 	</target>
     
     <target depends="init" name="compile">

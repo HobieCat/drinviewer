@@ -99,9 +99,12 @@ public class BroadCastListener implements Runnable {
 			running = true;
 		} catch (BindException e) {
 			throw e;
-		} catch (SocketException | UnknownHostException e) {
+		} catch (SocketException e) {
 			e.printStackTrace();
 			System.err.println("Could not open datagaram socket");
+			System.exit(-1);
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
 			System.exit(-1);
 		}
 	}

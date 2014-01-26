@@ -226,8 +226,12 @@ public class ServerListener implements Runnable {
 				out.close();
 				in.close();
 				socket.close();
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (IOException e) {
 				e.printStackTrace();
+				System.exit(-1);
+			} catch (ClassNotFoundException e){
+				e.printStackTrace();
+				System.exit(-1);
 			}
 		}
 	}

@@ -71,7 +71,9 @@ public class HostCollection {
 		while (elementReady) {
 			try {
 				wait();
-			} catch (InterruptedException e) {}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 		
 		// toggle status
@@ -93,7 +95,9 @@ public class HostCollection {
 		while (!elementReady) {
 			try {
 				wait();
-			} catch (InterruptedException e) {}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 		
 		// store element if not already in the array	

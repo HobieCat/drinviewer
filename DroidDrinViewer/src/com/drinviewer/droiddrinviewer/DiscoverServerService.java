@@ -19,17 +19,12 @@
  */
 package com.drinviewer.droiddrinviewer;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 import android.app.Service;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
-import android.util.Log;
 /**
  * Discover DrinViewer Hosts available for pairing or already paired
  * 
@@ -40,9 +35,6 @@ import android.util.Log;
  */
 public class DiscoverServerService extends Service {
 
-	//TODO Remove this
-	private final static String TAG = DiscoverServerService.class.getSimpleName();
-	
 	/**
 	 * Object used to synchronize when clients request the hostCollection
 	 */
@@ -54,14 +46,16 @@ public class DiscoverServerService extends Service {
 	private DrinHostCollection hostCollection = new DrinHostCollection();
 	
 	/**
-	 * A list of remote callbacks to communicate with the service
+	 * A list of remote callback to communicate with the service
 	 */
 	private RemoteCallbackList<DiscoverServerListener> listeners = new RemoteCallbackList<DiscoverServerListener>();
 	
 	/**
-	 * true if a discoery process is running
+	 * true if a discovery process is running
 	 */
 	private boolean isRunning = false;
+	
+	private String wifiBroadcastAddress = null;
 	
 	private DiscoverServerApi.Stub discoverAPI = new DiscoverServerApi.Stub() {
 
@@ -89,7 +83,6 @@ public class DiscoverServerService extends Service {
 
 		@Override
 		public void updatePairState(int position, boolean pairState) throws RemoteException {
-				Log.d(TAG,"Setting paired# "+position+"to: "+pairState);
 				hostCollection.setPaired(hostCollection.get(position), pairState);
 		}
 	};
@@ -97,16 +90,29 @@ public class DiscoverServerService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		
-		Log.d("onStartCommand","action: "+intent.getAction());
-		
 		if (intent.getAction().equals(getResources().getString(R.string.broadcast_startdiscovery))) {
 			// get the wifiBroadcastAddress from intent extra
-			String wifiBroadcastAddress = null;
+			wifiBroadcastAddress = null;
 			Bundle b = intent.getExtras();
 			if (b != null) {
 				wifiBroadcastAddress = b.getString("wifiBroadcastAddress");				
 			}
-			if (wifiBroadcastAddress != null) runDiscover(wifiBroadcastAddress);		
+			if (wifiBroadcastAddress != null) {
+				/**
+				 * the runDiscover can take some time to complete, it spawns
+				 * its own thread for the DiscoverServer to run but it also
+				 * puts a lock on the discoverLock Object and executes a couple
+				 * of synchronized methods of the DrinHostCollection class.
+				 * Remeber that the service always run on the UI thread, so
+				 * to avoid ANR let's run it in a separate thread as well.
+				 */
+				new Thread(new Runnable(){
+					@Override
+					public void run() {
+						runDiscover(wifiBroadcastAddress);
+					}
+				}).start();
+			}
 		} else if (intent.getAction().equals(getResources().getString(R.string.broadcast_cleanhostcollection))) {
 			hostCollection.init();
 			/**
@@ -127,12 +133,6 @@ public class DiscoverServerService extends Service {
 			
 			hostCollection.init();
 			
-			// fake host for debugging purposes
-			// TODO remove these 3 in final version
-			DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-			Date date = new Date();			
-			hostCollection.put(new DrinHostData(dateFormat.format(date), wifiBroadcastAddress, false));
-			
 			DiscoverServer ds = new DiscoverServer(hostCollection);
 			ds.setUUID(DrinViewerApplication.getInstallationUUID());
 			
@@ -141,7 +141,6 @@ public class DiscoverServerService extends Service {
 			synchronized (discoverLock) {
 				// start the discoverServer thread
 				new Thread(ds).start();
-				
 				/**
 				 * following called methods:
 				 * - isProducerRunning
@@ -157,15 +156,14 @@ public class DiscoverServerService extends Service {
 					sendBroadcastToListeners(DroidDrinViewerConstants.HOST_DISCOVERED, hs);
 				}
 			}
-			
 			/**
 			 * Sends a discovery done event to all listeners
 			 */
 			sendBroadcastToListeners(DroidDrinViewerConstants.DISCOVERY_DONE);
 			
-			Log.d(TAG, "size=" + hostCollection.size());
 		} catch (Throwable t) {
-			Log.e(TAG, "Failed to retrieve the hostCollection:", t);
+			// ignore
+			t.printStackTrace();
 		} finally {
 			isRunning = false;
 		}
@@ -214,9 +212,11 @@ public class DiscoverServerService extends Service {
 					break;				
 				}
 			}
-			listeners.finishBroadcast();
 		} catch (Throwable t) {
+			// ignore
 			t.printStackTrace();
+		} finally {
+			listeners.finishBroadcast();
 		}
 	}
 }

@@ -205,7 +205,6 @@ public class ClientConnectionManager {
 	 * Sets the port to connect to
 	 * 
 	 * @param port
-	 * @access public
 	 */
 	public void connectOnPort(int port) {
 		this.port = port;

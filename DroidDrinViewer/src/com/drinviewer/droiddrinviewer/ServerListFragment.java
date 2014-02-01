@@ -20,16 +20,17 @@
 package com.drinviewer.droiddrinviewer;
 
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -50,9 +51,6 @@ import com.drinviewer.common.HostData;
  */
 public class ServerListFragment extends Fragment implements ServiceConnection {
 
-	//TODO Remove this
-	private static final String TAG = ServerListFragment.class.getSimpleName();
-	
 	/**
 	 * The DrinHostAdapter to display the list
 	 * 
@@ -65,14 +63,6 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 * 
 	 */
 	private ProgressBar discoverServerProgress;
-	
-	/**
-	 * ProgressBar visibility status
-	 * can be View.GONE or View.VISIBLE
-	 * Must be Integer Object to be properly retained
-	 * 
-	 */
-	private Integer discoverServerVisibility = null;
 	
 	/**
 	 * The DiscoverServerAPI
@@ -88,55 +78,64 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 * true when this Fragment is bound to DiscoverServerService
 	 */
 	private boolean isBound = false;
+
+	/**
+	 * True if the UI must be updated
+	 */
+	private boolean mustUpdateUI = false;
 	
 	private DiscoverServerListener.Stub hostUpdatedListener = new DiscoverServerListener.Stub() {
 		@Override
 		public void onHostDiscoveryStarted() throws RemoteException {			
 			getAdapter().initHostCollection();
-			
 			 if (mustUpdateUI) {
 				 mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_START);
 			 }
-			 
-			 discoverServerVisibility = Integer.valueOf(View.VISIBLE);
 		}
 
 		@Override
-		public void onHostDiscoveryDone() throws RemoteException {			
-			DrinHostCollection newHostCollection = discoverServerApi.getMostUpToDateCollection();
-			if (newHostCollection != null) {
-				getAdapter().setHostCollection(newHostCollection);
-			}
-			
-			if (mustUpdateUI) {
-				mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_DONE);
-			}
-			
-			discoverServerVisibility = Integer.valueOf(View.GONE);
+		public void onHostDiscoveryDone() throws RemoteException {
+			/**
+			 *  getMostUpToDateCollection may cause can ANR (application not responding) issue
+			 *  because it must wait for a lock to be released, so the following code is executed
+			 *  in a separate thread. Remember we are running on the UI thread here.
+			 */
+			new Thread(new Runnable(){
+				@Override
+				public void run() {
+					DrinHostCollection newHostCollection;
+					try {
+						newHostCollection = discoverServerApi.getMostUpToDateCollection();
+						if (newHostCollection != null) {
+							getAdapter().setHostCollection(newHostCollection);
+						}
+						if (mustUpdateUI) {
+							mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_DONE);
+						}
+					} catch (RemoteException e) {
+						// ignore
+						e.printStackTrace();
+					}
+				}
+			}).start();
 		}
 
 		@Override
 		public void onHostDiscovered(DrinHostData hostData) throws RemoteException {
 			if (mustUpdateUI) {
 				getAdapter().getHostCollection().add(hostData);
-				mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_SERVER_FOUND);
+				if (mActivity != null) mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_SERVER_FOUND);
 			}
 		}
 
 		@Override
 		public void onHostCollectionInit() throws RemoteException {
 			getAdapter().initHostCollection();
-			
 			if (mustUpdateUI) {
-				mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_SERVER_FOUND);
+				if (mActivity != null) mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_COLLECTION_INIT);
 			}
 		}
 	}; 
-	
-	/**
-	 * True if the UI must be updated
-	 */
-	private boolean mustUpdateUI = false;
 	
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -166,9 +165,6 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
-		Log.d(TAG," ** ON CREATE **");
-		
         /**
          *  sends a message to the DrinViewerBroadcastReceiver to start the discovery repeat
          *  this fires an immediate discovery, so there's no need to call the doDiscover method
@@ -179,13 +175,10 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
         i.putExtra("forcegetbroadcast", true);
         mActivity.sendBroadcast(i);
         
-        Log.d("DrinViewerActivity","broadcast is sent");
-		
         /**
          * Bind the DiscoverServerService if it is not
          */
 		if (!isBound) {
-			Log.d (TAG,"is **NOT** bound, binding");
 			Intent intent = new Intent(DiscoverServerService.class.getName());
 			//TODO check Context.BIND_AUTO_CREATE
 			isBound = mActivity.getApplication().bindService(intent, this, 0);
@@ -198,18 +191,16 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	@Override
 	public void onResume() {
 		super.onResume();
-		
 		mustUpdateUI = true;
 		
 		/**
 		 * delay the code to be executed by 500ms, hoping
 		 * it is enough for the service to receive the broadcast
 		 * sent in onCreate and to bind to the Application
-		 */		
-		new Handler().postDelayed(new Runnable(){
+		 */	
+		new Timer().schedule(new TimerTask() {
 			@Override
 			public void run() {
-				Log.d(TAG," ** ON RESUME delayed **");
 				try {
 					if (discoverServerApi != null) {
 						/**
@@ -218,50 +209,60 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 						 *  The service will call the listener when it has finished
 						 */
 						if (discoverServerApi.isRunning()) {
-							Log.d(TAG," ** ON RESUME: IS RUNNING **");
-								if (mustUpdateUI) setProgressServerVisibility(View.VISIBLE);
+							if (mActivity != null) {
+								mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_START);
+							}
 						} else {
 							/**
 							 * If the service is not doing a discovery,
-							 * ask him fot the most up-to-date host collection
+							 * ask him for the most up-to-date host collection
 							 * set it in the adapter and display it
 							 */
-							Log.d(TAG," ** ON RESUME: IS NOT RUNNING **");
-							if (mustUpdateUI) {
-								setProgressServerVisibility(View.VISIBLE);
-								DrinHostCollection newCollection = discoverServerApi.getMostUpToDateCollection();
-								if (newCollection != null && newCollection.size()>0) {
-									getAdapter().setHostCollection(newCollection);
-									getAdapter().notifyDataSetChanged();
-									Log.d(TAG," ** ON RESUME: LIST IS SET **");
+								final DrinHostCollection newCollection = discoverServerApi.getMostUpToDateCollection();
+								if (mActivity != null) {
+									mActivity.runOnUiThread(new Runnable() {
+										@Override
+										public void run() {
+											if (newCollection != null) {
+												getAdapter().setHostCollection(newCollection);												
+											} else {
+												getAdapter().initHostCollection();
+											}	
+											getAdapter().notifyDataSetChanged();
+										}
+									});
+									/**
+									 * either the hostcollection has been set or voided,
+									 * turn off the discoverServerProgress
+									 */
+									mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_DONE);
 								}
-								/**
-								 * In any case, turn off the discoverServerProgress
-								 */
-								setProgressServerVisibility(View.GONE);
-							}
 						}
 					} else {
 						/**
 						 * If there's no service connected, do nothing :(
 						 */
-						Log.d(TAG," ** ON RESUME: API IS NULL **");
 					}
 				} catch (RemoteException e) {
 					// ignore
-					Log.d(TAG," ** ON RESUME: CATCH: "+e.getMessage()+" **");
 					e.printStackTrace();
 				}
 			}
 		}, 500);
 	}
 
+	/**
+	 * onAttach Fragment method
+	 */
 	@Override
 	public void onAttach(Activity activity) {
 		super.onAttach(activity);
 		mActivity = (DrinViewerActivity) activity;
 	}
 	
+	/**
+	 * onDetach Fragment method
+	 */
 	@Override
 	public void onDetach() {
 		super.onDetach();
@@ -328,7 +329,6 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 * service is not doing an update by itself.
 	 * Called by the Refresh List menu item
 	 * 
-	 * @param updateUI true if the UI must be updated while discovering
 	 */
 	public void doDiscover() {
 		
@@ -361,9 +361,8 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	 * @param v either View.GONE or View.Visible
 	 */
 	public void setProgressServerVisibility (int v) {
-		if (v == View.VISIBLE || v == View.GONE) {
-			discoverServerVisibility = Integer.valueOf(v);
-			discoverServerProgress.setVisibility(discoverServerVisibility.intValue());
+		if ((discoverServerProgress != null) &&  (v == View.VISIBLE || v == View.GONE)) {
+			discoverServerProgress.setVisibility(v);
 		}
 	}
 
@@ -383,8 +382,7 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 				pm = null;
 			}
 			toPair = null;
-		} else
-			System.err.println("Position "+position + " is invalid");
+		}
 	}
 	
 	/**
@@ -405,24 +403,12 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 		// that's how we get the client side of the IPC connection
 		if (discoverServerApi == null) {
 			discoverServerApi = DiscoverServerApi.Stub.asInterface(service);
-			
 			try {
 				discoverServerApi.addListener(hostUpdatedListener);
-				
-				// for debugging purposes only
-				// TODO remove these 5 in final version
-				if (discoverServerApi != null && !discoverServerApi.isRunning()) {
-					Log.d(TAG," ** onServiceConnected IS NOT RUNNING ** ");
-				} else {
-					Log.d(TAG," ** onServiceConnected IS RUNNING ** do nothing");
-				}
 			} catch (RemoteException e) {
 				// ignore
 				e.printStackTrace();
 			}
 		}
-		// for debugging purposes only
-		// TODO remove this in final version				
-		Log.d(TAG,"onServiceConnected, is API null? "+(discoverServerApi==null));
 	}
 }

@@ -224,6 +224,7 @@ public class DiscoverServer implements Runnable {
 				if (socket!=null) socket.close();
 			} catch (IOException e) {
 				e.printStackTrace();
+				terminate();
 			}
 		}
 	}
@@ -232,7 +233,6 @@ public class DiscoverServer implements Runnable {
 	 * Tells if the runnable is running
 	 * 
 	 * @return boolean true if the discover process is running
-	 * @access public
 	 */
 	public boolean isRunning() {
 		return running;
@@ -240,8 +240,6 @@ public class DiscoverServer implements Runnable {
 	
 	/**
 	 * Terminates the runnable
-	 * 
-	 * @access public
 	 */
 	public void terminate() {
 		serverCollection.notifyProducerHasStopped();

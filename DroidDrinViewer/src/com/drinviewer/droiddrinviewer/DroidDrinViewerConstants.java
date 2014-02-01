@@ -36,6 +36,8 @@ public class DroidDrinViewerConstants extends Constants {
 	public static final int    MSG_DISCOVER_DONE = 668;
 	// Toggle pairing message sent to the app handler	
 	public static final int    MSG_SERVER_TOGGLEPAIRED = 669;
+	// Collection init sent to the app handler
+	public static final int    MSG_COLLECTION_INIT = 700;
 	
 	// triggers onHostCollectionInit
 	public static final int COLLECTION_INIT = 1;
@@ -43,7 +45,7 @@ public class DroidDrinViewerConstants extends Constants {
 	public static final int DISCOVERY_STARTED = 2;
 	// triggers onHostDiscovered
 	public static final int HOST_DISCOVERED = 3;
-	// triggers onHostCollectionInit
+	// triggers onHostDiscoveryDone
 	public static final int DISCOVERY_DONE = 4;
 	
 	// restart discover service every 10 minutes

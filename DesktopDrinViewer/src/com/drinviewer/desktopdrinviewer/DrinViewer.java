@@ -24,7 +24,6 @@ import java.net.BindException;
 import java.text.MessageFormat;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -65,12 +64,9 @@ public class DrinViewer {
 		final Menu menu = new Menu(shell, SWT.POP_UP);
 
 		// icon image for the system tray
-		Image highlightImage = new Image(display, 16, 16);
-		Image normalImage = new Image(display, 16, 16);
-		GC gc = new GC(normalImage);
-		gc.setBackground(display.getSystemColor(SWT.COLOR_BLACK));
-		gc.fillRectangle(normalImage.getBounds());
-		gc.dispose();
+		Image normalImage = new Image(display, new DrinImageLoader("icon.png").data[0]);
+		Image highlightImage = normalImage;
+
 		final Tray tray = display.getSystemTray();
 		
 		/**
@@ -223,7 +219,6 @@ public class DrinViewer {
 	 * handle server is already running or port in
 	 * use error by displaying a dialog to the user
 	 * 
-	 * @param shell 
 	 */
 	private static void alreadyRunningError(Shell shell) {
 		

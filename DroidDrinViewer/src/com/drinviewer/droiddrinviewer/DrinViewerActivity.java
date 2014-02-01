@@ -41,7 +41,6 @@ public class DrinViewerActivity extends FragmentActivity {
 	/**
 	 * message handler for the whole application
 	 * 
-	 * @var DrinViewerHandler
 	 */
 	private DrinViewerHandler messageHandler;
 	
@@ -66,7 +65,7 @@ public class DrinViewerActivity extends FragmentActivity {
 
 		case R.id.menu_refresh:
 			ServerListFragment slFragment = (ServerListFragment) getSupportFragmentManager().findFragmentById(R.id.serverlistfragment);
- 			slFragment.doDiscover(true);
+ 			slFragment.doDiscover();
 			return true;
 		default:
 			return super.onOptionsItemSelected(item);
@@ -95,7 +94,6 @@ public class DrinViewerActivity extends FragmentActivity {
 		/**
 		 * weak reference to the containing activity
 		 * 
-		 * @var WeakReference<DrinViewerActivity>
 		 */
 		private final WeakReference<DrinViewerActivity> mActivity;
 

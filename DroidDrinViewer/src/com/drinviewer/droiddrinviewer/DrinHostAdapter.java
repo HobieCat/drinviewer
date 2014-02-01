@@ -40,20 +40,18 @@ public class DrinHostAdapter extends BaseAdapter {
 	/**
 	 * Main activity context
 	 * 
-	 * @var Context
 	 */
 	private Context context;
 	
 	/**
 	 * DrinHostCollection to be displayed
 	 * 
-	 * @var DrinHostCollection
 	 */
 	private DrinHostCollection hostCollection;
 
-	public DrinHostAdapter(Context context, DrinHostCollection hostCollection) {
+	public DrinHostAdapter(Context context) {
 		this.context = context;
-		setHostCollection(hostCollection);
+		setHostCollection(new DrinHostCollection());
 	}
 
 	/**
@@ -68,22 +66,50 @@ public class DrinHostAdapter extends BaseAdapter {
 		ImageView iconPaired = (ImageView) rowView.findViewById(R.id.iconPaired);
 		
 		HostData data = hostCollection.get(position);
-		
-		serverNameLine.setText(data.hostname);
-		serverIPLine.setText(data.address);	
-		
-		iconPaired.setImageDrawable(context.getResources().getDrawable(
-				(data.isPaired) ? android.R.drawable.btn_star_big_on : android.R.drawable.btn_star_big_off ));
-		
+		if (data != null) {
+			serverNameLine.setText(data.hostname);
+			serverIPLine.setText(data.address);	
+			
+			iconPaired.setImageDrawable(context.getResources().getDrawable(
+					(data.isPaired) ? android.R.drawable.btn_star_big_on : android.R.drawable.btn_star_big_off ));
+		}
 		return rowView;		
 	}
 	
 	/**
 	 * Sets the DrinHostCollection to be displayed
+	 * 
 	 * @param c the collection to be displayed
 	 */
 	public void setHostCollection (DrinHostCollection c) {
-		this.hostCollection = c;
+		hostCollection = c;
+	}
+	
+	/**
+	 * hostCollection getter
+	 * 
+	 * @return the hostCollection
+	 */
+	public DrinHostCollection getHostCollection() {
+		return hostCollection;
+	}
+
+	/**
+	 * clears the DrinHostCollection
+	 */
+	public void initHostCollection () {
+		hostCollection.init();
+	}
+	
+	/**
+	 * Updates isPaired status on an Host and redraws the
+	 * list to set the appropriate icon
+	 * 
+	 * @param position the position of the host to be paired in the list
+	 * @param isPaired true if the host is paired
+	 */
+	public void updateIsPaired(int position, boolean isPaired) {
+		hostCollection.setPaired(hostCollection.get(position), isPaired);
 	}
 	
 	/**

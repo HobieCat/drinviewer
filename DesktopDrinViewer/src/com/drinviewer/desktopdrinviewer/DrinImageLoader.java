@@ -62,7 +62,6 @@ public class DrinImageLoader extends ImageLoader {
 		load (is);
 	}
 	
-	// TODO this must be verified when used with android, possibly duplicate it?
 	public byte[] getScaled (int longestSidePx) {
 		
 		ImageData[] imageData = null;

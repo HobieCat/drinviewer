@@ -24,7 +24,6 @@ import java.net.BindException;
 import java.text.MessageFormat;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -52,7 +51,7 @@ public class DrinViewer {
 	private static int port = Constants.PORT;
 
 	public static void main(String[] args) {
-
+		// if an argument is passed, it's the comm port
 		if (args.length > 0) {
 			for (int i = 0; i < args.length; i++) {
 				if (i == 0)
@@ -61,16 +60,13 @@ public class DrinViewer {
 		}
 		
 		final Display display = new Display();
-
 		final Shell shell = new Shell(display);
 		final Menu menu = new Menu(shell, SWT.POP_UP);
 
-		Image image = new Image(display, 16, 16);
-		Image image2 = new Image(display, 16, 16);
-		GC gc = new GC(image2);
-		gc.setBackground(display.getSystemColor(SWT.COLOR_BLACK));
-		gc.fillRectangle(image2.getBounds());
-		gc.dispose();
+		// icon image for the system tray
+		Image normalImage = new Image(display, new DrinImageLoader("icon.png").data[0]);
+		Image highlightImage = normalImage;
+
 		final Tray tray = display.getSystemTray();
 		
 		/**
@@ -83,8 +79,15 @@ public class DrinViewer {
 			alreadyRunningError(shell);
 		}
 		
+		/*
+		 * THE NOTIFIER (aka POPUP) DIALOG
+		 */
 		final NotifierDialog ndlg = new NotifierDialog(display);
 		
+		/**
+		 * add the DesktopServer event listener, this
+		 * actually cause the popup to be displayed
+		 */
 		ds.addListener(new IncomingDrinListener() {
 			@Override
 			public void handleDrin(final IncomingDrinEvent event) {
@@ -102,6 +105,9 @@ public class DrinViewer {
 			final TrayItem item = new TrayItem(tray, SWT.NONE);
 			item.setToolTipText(Constants.APPNAME+" "+Constants.APPVERSION);
 
+			/**
+			 * selection event listener
+			 */
 			item.addListener(SWT.Selection, new Listener() {
 				@Override
 				public void handleEvent(Event event) {
@@ -109,16 +115,25 @@ public class DrinViewer {
 				}
 			});
 
+			/**
+			 * menudetect event listener
+			 */
 			item.addListener(SWT.MenuDetect, new Listener() {
 				@Override
 				public void handleEvent(Event event) {
 					menu.setVisible(true);
 				}
 			});
-			
+
+			/**
+			 *  start server and stop server menu item definition
+			 */
 			final MenuItem startServer = new MenuItem(menu, SWT.PUSH);
 			final MenuItem stopServer = new MenuItem(menu, SWT.PUSH);
 			
+			/**
+			 * start server menu item implementation
+			 */
 			startServer.setText(DesktopDrinViewerConstants.i18nMessages.getString("startserver"));
 			startServer.setEnabled(false);
 			startServer.addListener(SWT.Selection, new Listener() {
@@ -134,6 +149,9 @@ public class DrinViewer {
 				}
 			});
 			
+			/**
+			 * stop server menu item implementation
+			 */
 			stopServer.setText(DesktopDrinViewerConstants.i18nMessages.getString("stopserver"));
 			stopServer.addListener(SWT.Selection, new Listener() {
 				@Override
@@ -144,6 +162,9 @@ public class DrinViewer {
 				}
 			});
 			
+			/**
+			 * test notification menu item
+			 */
 			MenuItem testNotify = new MenuItem(menu, SWT.PUSH);
 			testNotify.setText("Test Notification");
 			testNotify.addListener(SWT.Selection, new Listener() {
@@ -156,9 +177,12 @@ public class DrinViewer {
 					});
 				}
 			});
-			
+			// separator before exit
 			new MenuItem(menu, SWT.SEPARATOR);
 			
+			/**
+			 * exit menu item
+			 */
 			MenuItem exit = new MenuItem(menu, SWT.PUSH);
 			exit.setText(DesktopDrinViewerConstants.i18nMessages.getString("exit"));
 			exit.addListener(SWT.Selection, new Listener() {
@@ -168,24 +192,33 @@ public class DrinViewer {
 				}
 			});
 
-			item.setImage(image2);
-			item.setHighlightImage(image);
+			/**
+			 * set the icon images for the systray item
+			 */
+			item.setImage(normalImage);
+			item.setHighlightImage(highlightImage);
 		}
 
+		/**
+		 * wait for something to happen till the shell is there
+		 */
 		while (!shell.isDisposed()) {
 			if (!display.readAndDispatch())
 				display.sleep();
 		}
 		
-		image.dispose();
-		image2.dispose();
+		/**
+		 * dispose unneeded stuff
+		 */
+		highlightImage.dispose();
+		normalImage.dispose();
 		display.dispose();
 	}
 	
 	/**
 	 * handle server is already running or port in
 	 * use error by displaying a dialog to the user
-	 * @param shell 
+	 * 
 	 */
 	private static void alreadyRunningError(Shell shell) {
 		

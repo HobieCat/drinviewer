@@ -34,10 +34,10 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
@@ -70,9 +70,11 @@ public class NotifierDialog {
 
     // how high the alpha value is when we have finished fading in 
     private final int   FINAL_ALPHA   = 225;
-    
+    // default minimum popup width
     private final int   WIDTH = 250;
+    // popup border
     private final int   BORDER = 2;
+    // popup inner margin
     private final int   MARGIN = 5;
 
     // title foreground color
@@ -90,14 +92,8 @@ public class NotifierDialog {
     // contains list of all active popup shells
     private List<Shell> _activeShells;
 
-    // image used when drawing
-    private Image       _oldImage;
-
-    private Shell       _shell;
-    
+    private Shell   _shell;
     private Display _display;
-    
-    
     
     public NotifierDialog(Display _display) {
 		this._display = _display;
@@ -105,8 +101,10 @@ public class NotifierDialog {
 	}
 
 	public void notify(String title, String message, byte[] imageData) {
-    	
-    	Shell _hiddenShell = new Shell(_display, SWT.NO_FOCUS | SWT.NO_TRIM);
+
+		// hidden shell used to hide the popup to appear as a desktop window
+		Shell _hiddenShell = new Shell(_display, SWT.NO_FOCUS | SWT.NO_TRIM);
+		
         _shell = new Shell(_hiddenShell, SWT.NO_FOCUS | SWT.NO_TRIM | SWT.ON_TOP);
         _shell.setLayout(new FillLayout());
         _shell.setForeground(_fgColor);
@@ -127,70 +125,36 @@ public class NotifierDialog {
 
         inner.setLayout(gl);
         _shell.addListener(SWT.Resize, new Listener() {
-
             @Override
             public void handleEvent(Event e) {
                 try {
                     // get the size of the drawing area
                     Rectangle rect = _shell.getClientArea();
-                    
                     // create a new image with that size
                     Image newImage = new Image(Display.getDefault(), Math.max(1, rect.width), rect.height);
                     // create a GC object we can use to draw with
                     GC gc = new GC(newImage);
-                    
                     gc.setAdvanced(true);
                     gc.setAntialias(SWT.ON);
-
                     // fill background
                     gc.setForeground(_bgFgGradient);
                     gc.setBackground(_bgBgGradient);
                     gc.fillGradientRectangle(rect.x, rect.y, rect.width, rect.height, true);
-                                       
                     // draw shell edge
                     gc.setLineWidth(BORDER);
                     gc.setForeground(_borderColor);
                     gc.drawRectangle(rect.x + 1, rect.y + 1, rect.width - BORDER, rect.height - BORDER);
-                    // remember to dipose the GC object!
+                    // remember to dispose the GC object!
                     gc.dispose();
-
                     // now set the background image on the shell
                     _shell.setBackgroundImage(newImage);
-
-                    // remember/dispose old used iamge
-                    if (_oldImage != null) {
-                        _oldImage.dispose();
-                    }
-                    _oldImage = newImage;                    
-                    
                 } catch (Exception err) {
                     err.printStackTrace();
                 }
             }
-            
         });
-        
-        GC gc = new GC(_shell);
 
-        String lines[] = message.split("\n");
-        Point longest = null;
-        int typicalHeight = gc.stringExtent("X").y;
-
-        for (String line : lines) {
-            Point extent = gc.stringExtent(line);
-            if (longest == null) {
-                longest = extent;
-                continue;
-            }
-
-            if (extent.x > longest.x) {
-                longest = extent;
-            }
-        }
-        gc.dispose();
-
-        int minHeight = typicalHeight * lines.length;
-
+        // add the image to the popup
         CLabel imgLabel = new CLabel(inner, SWT.NONE);
         GridData glimg = new GridData(GridData.VERTICAL_ALIGN_CENTER);
         glimg.verticalSpan = 2;
@@ -200,25 +164,37 @@ public class NotifierDialog {
         if (imageData == null)
         { 
         	imageData = new DrinImageLoader("icon.png").getScaled(Constants.ICON_SIZE);
-        }
-        
+        }        
         // and put it in the popup
         imgLabel.setImage( new Image (_display, new ImageData(new ByteArrayInputStream(imageData))) );
+        
+        // minimum popup height is the height of the image
+        int minHeight = Constants.ICON_SIZE+(MARGIN*2)+(BORDER*2); // img. height + margin *2 + border *2
 
+        // add title to the popup
         CLabel titleLabel = new CLabel(inner, SWT.NONE);
         titleLabel.setLayoutData(new GridData(GridData.FILL_HORIZONTAL | GridData.VERTICAL_ALIGN_BEGINNING));
         titleLabel.setText(title);
         titleLabel.setForeground(_titleFgColor);
         titleLabel.setTopMargin(15);
-        Font f = titleLabel.getFont();
-        FontData fd = f.getFontData()[0];
+        // Set title font
+        FontData fd = titleLabel.getFont().getFontData()[0];
         fd.setStyle(SWT.BOLD);
         fd.height = 11;
         titleLabel.setFont(new Font(Display.getDefault(), fd));
+        
+        // compute popup width basing on how long the title is
+        // adding an extra "X" char for safety...
+        GC labelGC = new GC(titleLabel);
+        int popupWidth = labelGC.textExtent(title+"X").x +
+        				 Constants.ICON_SIZE+(MARGIN*2)+(BORDER*2)+
+        				 titleLabel.getRightMargin()+titleLabel.getLeftMargin()+
+        				 imgLabel.getLeftMargin()+imgLabel.getRightMargin();
+        labelGC.dispose();
 
+        // add text to the popup
         Label text = new Label(inner, SWT.WRAP);
-        Font tf = text.getFont();
-        FontData tfd = tf.getFontData()[0];
+        FontData tfd = text.getFont().getFontData()[0];
         tfd.setStyle(SWT.BOLD);
         tfd.height = 8;
         text.setFont(new Font(Display.getDefault(), tfd));
@@ -227,17 +203,29 @@ public class NotifierDialog {
         text.setForeground(_fgColor);
         text.setText(message);
 
-        minHeight = Constants.ICON_SIZE+(MARGIN*2)+(BORDER*2); // img. height + margin *2 + border *2 
-
-        _shell.setSize(WIDTH, minHeight);
-
         if (_display == null) { return; }
         Rectangle clientArea = _display.getClientArea();
 
-        //TODO: if no popup coordinates are set in the preferences
-        int startX = clientArea.x + clientArea.width - WIDTH;
-        int startY = 650 + (_activeShells.size() * minHeight);
+        // fix the popup width
+        if (popupWidth < WIDTH) popupWidth = WIDTH;
+        else if (popupWidth > clientArea.x + clientArea.width) popupWidth = clientArea.x + clientArea.width - 1 ;
+        
+        // fix popup height
+        int titleHeight = titleLabel.computeSize(SWT.DEFAULT, SWT.DEFAULT).y;
+        int messageHeight = text.computeSize(SWT.DEFAULT, SWT.DEFAULT).y;        
+        if (titleHeight + messageHeight > minHeight) {
+        	minHeight = titleHeight + messageHeight +(MARGIN*2)+(BORDER*2)*4;
+        }
+        
+        // set popup size
+        _shell.setSize(popupWidth, minHeight);
 
+        //TODO: if no popup coordinates are set in the preferences
+        // set popup start coordinates
+        int startX = clientArea.x + clientArea.width - popupWidth - 1;
+        // 650 is an arbitrary Y
+        int startY = 650 + (_activeShells.size() * minHeight);
+        
         boolean forceMoveUp = false;
         
         // if the bottom of the popup will fall below the screen...
@@ -272,9 +260,7 @@ public class NotifierDialog {
         _shell.setLocation(startX, startY);
         _shell.setAlpha(0);
         _shell.setVisible(true);
-
         _activeShells.add(_shell);
-
         fadeIn(_shell);
     }
     
@@ -339,9 +325,7 @@ public class NotifierDialog {
                     if (cur <= 0) {
                     	_shell.setVisible(false);
                         _shell.setAlpha(0);
-                        if (_oldImage != null) {
-                            _oldImage.dispose();
-                        }
+                        
                         System.out.println("Removing active shell");
                         _activeShells.remove(_shell);
                         _shell.dispose();

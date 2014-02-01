@@ -74,7 +74,7 @@ public class Constants {
 	public static final int    DISCOVERY_BROADCAST_COUNT = 3;
 	// timeout for the client DISCOVER phase. The client will keep waiting for responses for this amount of time
 	// single receive time out is: desired total timeout/number of time to send the broadcast	
-	public static final int    DISCOVER_TIMEOUT = 9*1000 / Constants.DISCOVERY_BROADCAST_COUNT; // 9 seconds
+	public static final int    DISCOVER_TIMEOUT = 12*1000 / Constants.DISCOVERY_BROADCAST_COUNT; // 10 seconds
 	// timeout when waiting for a pairing request response
 	public static final int	   PAIRING_TIMEOUT = DISCOVER_TIMEOUT;
 	

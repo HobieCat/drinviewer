@@ -19,12 +19,12 @@
  */
 package com.drinviewer.droiddrinviewer;
 
-import com.drinviewer.droiddrinviewer.DrinViewerActivity.DrinViewerHandler;
-
 import android.app.Service;
 import android.content.Intent;
-import android.os.Binder;
+import android.os.Bundle;
 import android.os.IBinder;
+import android.os.RemoteCallbackList;
+import android.os.RemoteException;
 /**
  * Discover DrinViewer Hosts available for pairing or already paired
  * 
@@ -36,102 +36,187 @@ import android.os.IBinder;
 public class DiscoverServerService extends Service {
 
 	/**
-	 * The hostCollection used by the service
-	 * 
-	 * Shared between the UI list and the background running
-	 * process. This is the most up-to-date host list available
-	 * ready to use whenever it's needed
+	 * Object used to synchronize when clients request the hostCollection
 	 */
-	private DrinHostCollection hostCollection;
+	private final Object discoverLock = new Object();
 	
 	/**
-	 * The DiscoverServer Runnable to be run
+	 * The stored, most up-to-dated DrinHostCollection
 	 */
-	private DiscoverServer discoverServer;
+	private DrinHostCollection hostCollection = new DrinHostCollection();
 	
 	/**
-	 * Service binder
+	 * A list of remote callback to communicate with the service
 	 */
-	private final IBinder mBinder = new DiscoverServerBinder();
+	private RemoteCallbackList<DiscoverServerListener> listeners = new RemoteCallbackList<DiscoverServerListener>();
 	
-	@Override
-	public void onCreate() {
-		super.onCreate();
-		hostCollection = new DrinHostCollection();
-	}
+	/**
+	 * true if a discovery process is running
+	 */
+	private boolean isRunning = false;
+	
+	private String wifiBroadcastAddress = null;
+	
+	private DiscoverServerApi.Stub discoverAPI = new DiscoverServerApi.Stub() {
 
-	/**
-	 * When service gets started it looks if the passed intent action is a request to start
-	 * a discovery or a reqeust to clean the stored hosCollection (used e.g. when the deivce
-	 * is disconnected to a WiFi network to display an empty list) 
-	 */
+		@Override
+		public DrinHostCollection getMostUpToDateCollection() throws RemoteException {
+			synchronized (discoverLock) {
+				return hostCollection;				
+			}
+		}
+		
+		@Override
+		public void addListener(DiscoverServerListener listener) throws RemoteException {
+			if (listener != null) listeners.register(listener);
+		}
+		
+		@Override
+		public void removeListener(DiscoverServerListener listener) throws RemoteException {
+			if (listener != null) listeners.unregister(listener);
+		}
+
+		@Override
+		public boolean isRunning() throws RemoteException {
+			return isRunning;
+		}
+
+		@Override
+		public void updatePairState(int position, boolean pairState) throws RemoteException {
+				hostCollection.setPaired(hostCollection.get(position), pairState);
+		}
+	};
+	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		
 		if (intent.getAction().equals(getResources().getString(R.string.broadcast_startdiscovery))) {
-			// Instantiates the DiscoverServerRunnable
-			discoverServer = new DiscoverServer(hostCollection);
-			// Forces a hostCollection update without updating the UI
-			forceUpdate(false);
+			// get the wifiBroadcastAddress from intent extra
+			wifiBroadcastAddress = null;
+			Bundle b = intent.getExtras();
+			if (b != null) {
+				wifiBroadcastAddress = b.getString("wifiBroadcastAddress");				
+			}
+			if (wifiBroadcastAddress != null) {
+				/**
+				 * the runDiscover can take some time to complete, it spawns
+				 * its own thread for the DiscoverServer to run but it also
+				 * puts a lock on the discoverLock Object and executes a couple
+				 * of synchronized methods of the DrinHostCollection class.
+				 * Remeber that the service always run on the UI thread, so
+				 * to avoid ANR let's run it in a separate thread as well.
+				 */
+				new Thread(new Runnable(){
+					@Override
+					public void run() {
+						runDiscover(wifiBroadcastAddress);
+					}
+				}).start();
+			}
 		} else if (intent.getAction().equals(getResources().getString(R.string.broadcast_cleanhostcollection))) {
-			// Clears the hostCollection
 			hostCollection.init();
+			/**
+			 * Sends a host init event to all listeners
+			 */
+			sendBroadcastToListeners(DroidDrinViewerConstants.COLLECTION_INIT);
 		}
 		return Service.START_NOT_STICKY;
 	}
+	
+	private void runDiscover (String wifiBroadcastAddress) {
+		try {
+			isRunning = true;
+			/**
+			 * Sends a discovery started event to all listeners
+			 */
+			sendBroadcastToListeners(DroidDrinViewerConstants.DISCOVERY_STARTED);
+			
+			hostCollection.init();
+			
+			DiscoverServer ds = new DiscoverServer(hostCollection);
+			ds.setUUID(DrinViewerApplication.getInstallationUUID());
+			
+			if (wifiBroadcastAddress != null) ds.setBroadcastAddress (wifiBroadcastAddress);
+
+			synchronized (discoverLock) {
+				// start the discoverServer thread
+				new Thread(ds).start();
+				/**
+				 * following called methods:
+				 * - isProducerRunning
+				 * - getLast
+				 * are both synchronized, so that they should return as soon as an
+				 * host is found and added to the hostCollection or the timeout is reached
+				 */
+				while (hostCollection.isProducerRunning()) {
+					DrinHostData hs = hostCollection.getLast();					
+					/**
+					 * Sends a host discovered event to all listeners
+					 */
+					sendBroadcastToListeners(DroidDrinViewerConstants.HOST_DISCOVERED, hs);
+				}
+			}
+			/**
+			 * Sends a discovery done event to all listeners
+			 */
+			sendBroadcastToListeners(DroidDrinViewerConstants.DISCOVERY_DONE);
+			
+		} catch (Throwable t) {
+			// ignore
+			t.printStackTrace();
+		} finally {
+			isRunning = false;
+		}
+	}
 
 	@Override
-	public IBinder onBind(Intent arg0) {
-		return mBinder;
+	public void onDestroy() {
+		super.onDestroy();
+		listeners.kill();
+	}
+
+	@Override
+	public IBinder onBind(Intent intent) {
+		if (DiscoverServerService.class.getName().equals(intent.getAction())) {
+			return discoverAPI;
+		} else {
+			return null;
+		}
 	}
 	
 	/**
-	 * Forces a hostCollection update by actually running the DiscoverServer Runnable in a new Thread
+	 * send the broadcast to all registered listeners
 	 * 
-	 * @param updateUI true if an update to the UI is required
+	 * @param what int representing which broadcast to send
+	 * @param params the DrinHostData associated to a HOST_DISCOVERED event
 	 */
-	private void forceUpdate (boolean updateUI) {
-		// Sets the UUID to be used
-		discoverServer.setUUID( DrinViewerApplication.getInstallationUUID());
-		// Tells the DiscoverServer if it must send messages to the DrinViewerActivity handler
-		discoverServer.setSendUpdateUIMessage(updateUI);
-		// Inits the collectiom
-		hostCollection.init();
-		// Runs the Runnable
-		new Thread(discoverServer).start();	
-	}
-	
-	/**
-	 * Forces a hostCollection from the UI
-	 * 
-	 * @param handler the DrinViewerHandler to use in order to handle messages to update the UI
-	 * @param passedCollection the DrinHostCollection that's being used when drawing the UI
-	 */
-	public void forceUpdateWithUIMessage (DrinViewerHandler handler, DrinHostCollection passedCollection) {
-		// Sets the hostCollection to the passed one, so the listview gets properly updated
-		hostCollection = passedCollection;
-		// Tells the DiscoverServer which hostCollection and handler to use
-		discoverServer = new DiscoverServer(hostCollection, handler);
-		// Runs the collection+UI update
-		forceUpdate(true);
-	}
-	
-	/*
-	 * Get the most up-to-date hostCollection
-	 */
-	public DrinHostCollection getHostCollection() {
-		return hostCollection;
-	}
-	
-	/**
-	 * DiscoverServerBinder to bind the DiscoverServerService
-	 * 
-	 * @author giorgio
-	 *
-	 */
-	public class DiscoverServerBinder extends Binder {
-		public DiscoverServerService getService() {
-			return DiscoverServerService.this;
+	private void sendBroadcastToListeners (int what, Object...params) {
+		try {
+			int N = listeners.beginBroadcast();
+			for (int i=0; i<N; i++) {
+				switch (what) {
+				case DroidDrinViewerConstants.COLLECTION_INIT:
+					listeners.getBroadcastItem(i).onHostCollectionInit();
+					break;
+				case DroidDrinViewerConstants.DISCOVERY_STARTED:
+					listeners.getBroadcastItem(i).onHostDiscoveryStarted();
+					break;
+				case DroidDrinViewerConstants.HOST_DISCOVERED:
+					if (params.length == 1)
+					{
+						listeners.getBroadcastItem(i).onHostDiscovered((DrinHostData) params[0]);
+					}
+					break;
+				case DroidDrinViewerConstants.DISCOVERY_DONE:
+					listeners.getBroadcastItem(i).onHostDiscoveryDone();
+					break;				
+				}
+			}
+		} catch (Throwable t) {
+			// ignore
+			t.printStackTrace();
+		} finally {
+			listeners.finishBroadcast();
 		}
 	}
 }

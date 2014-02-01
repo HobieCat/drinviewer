@@ -36,14 +36,12 @@ public class PairProtocolTask extends AsyncTask<ClientConnectionManager, Void, O
 	/**
 	 * The app handler to which send messages
 	 * 
-	 * @var DrinViewerHandler
 	 */
 	private DrinViewerHandler handler;
 	
 	/**
 	 * The position  in the collection of the host to run the pairing process with
 	 * 
-	 * @var int
 	 */
 	private int hostPositionInCollection;
 	
@@ -107,8 +105,6 @@ public class PairProtocolTask extends AsyncTask<ClientConnectionManager, Void, O
 		/**
 		 * The pairing protocol result
 		 * true if device has been paired
-		 * 
-		 * @var boolean
 		 */
 		public boolean isPaired;
 		
@@ -116,7 +112,6 @@ public class PairProtocolTask extends AsyncTask<ClientConnectionManager, Void, O
 		 * The exception raised during the protocol execution
 		 * null if there was no exception
 		 * 
-		 * @var Exception
 		 */
 		public Exception e;
 		

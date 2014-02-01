@@ -27,13 +27,14 @@
         android:targetSdkVersion="18" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
      
     <!--
     <uses-permission android:name="android.permission.WAKE_LOCK" /> 
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    
     -->
     <application
         android:name="com.drinviewer.droiddrinviewer.DrinViewerApplication"
@@ -50,14 +51,24 @@
             </intent-filter>
         </activity>
         
+        <activity android:name="org.acra.CrashReportDialog"
+        	android:theme="@android:style/Theme.Dialog"
+        	android:launchMode="singleInstance"
+        	android:excludeFromRecents="true"
+        	android:finishOnTaskLaunch="true" />
+        
         <receiver android:name="com.drinviewer.droiddrinviewer.DrinViewerBroadcastReceiver" >
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
         		<action android:name="android.net.wifi.STATE_CHANGE"/>
+        		
+        		<!--
+        		<action android:name="@string/broadcast_startalarmrepeater"/> 
         		<action android:name="@string/broadcast_startdiscovery"/>
         		<action android:name="@string/broadcast_cleanhostcollection"/>
         		<action android:name="@string/broadcast_startalarmrepeater"/>
         		<action android:name="@string/broadcast_stopalarmrepeater"/>
+        		-->
             </intent-filter>
 		</receiver>
 		
@@ -66,12 +77,19 @@
                 <action android:name="android.intent.action.PHONE_STATE" />
             </intent-filter>
         </receiver>
-				
-        <service 
+        
+        <service
             android:name="com.drinviewer.droiddrinviewer.DiscoverServerService"
+            android:exported="false"
             android:icon="@drawable/ic_launcher"
-            android:label="@string/discover_server_servicename">   
+            android:label="@string/discover_server_servicename" 
+            android:process=":drinviewerdiscovery" >
+            <intent-filter>
+                <action android:name="com.drinviewer.droiddrinviewer.DiscoverServerService" />
+                <action android:name="@string/broadcast_startdiscovery"/>
+                <action android:name="@string/broadcast_cleanhostcollection"/>
+            </intent-filter>
         </service>
-		        
+	
     </application>
 </manifest>

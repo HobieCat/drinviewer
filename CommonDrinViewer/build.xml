@@ -6,6 +6,8 @@
 	<property name="dist.dir" location="dist" />
 	<property name="docs.dir" location="docs" />
 	<property name="lib.dir" location="lib" />
+	<property name="javasource" value="1.6" />
+	<property name="javatarget" value="1.6" />
 	
     <path id="CommonDrinViewer.classpath">
         <pathelement location="${build.dir}"/>
@@ -29,13 +31,12 @@
     <!-- Creates the  build, docs and dist directory-->
 	<target name="makedir">
 		<mkdir dir="${build.dir}" />
-		<mkdir dir="${docs.dir}" />
-		<mkdir dir="${dist.dir}" />	
 	</target>
     
     <target depends="init" name="compile">
         <echo message="${ant.project.name}: ${ant.file}"/>
-        <javac debug="true" debuglevel="${debuglevel}" srcdir="${src.dir}" destdir="${build.dir}" includeantruntime="false">
+		<javac debug="true" debuglevel="${debuglevel}" srcdir="${src.dir}" destdir="${build.dir}" includeantruntime="false" 
+		    	target="${javatarget}" source="${javasource}" >        
             <src path="${src.dir}"/>
             <classpath refid="CommonDrinViewer.classpath"/>
         </javac>

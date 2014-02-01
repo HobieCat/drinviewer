@@ -10,5 +10,8 @@
     <string name="broadcast_startalarmrepeater">com.drinviewer.droiddrinviewer.startalarmrepeater</string>
     <string name="broadcast_stopalarmrepeater">com.drinviewer.droiddrinviewer.stopalarmrepeater</string>
     
+    <!-- ACRA strings -->
+    <string name="crash_toast_text">Ooooops ! I crashed, please review and send this email to my developer to help fix the issue !</string>
+	<!-- end ACRA strings -->
 
 </resources>

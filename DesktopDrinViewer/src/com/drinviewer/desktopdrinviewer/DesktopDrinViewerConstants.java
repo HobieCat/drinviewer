@@ -32,4 +32,10 @@ public class DesktopDrinViewerConstants extends Constants {
 	// the application ResourceBundle messages, for i18n purposes
 	// Locale.getDefault() is implicitly used by the ResourceBundle
 	 public static final ResourceBundle i18nMessages = ResourceBundle.getBundle("DrinViewerUI");
+	 
+	 // preferences string to tell if the server is running
+	 public static final String PREFS_SERVER = "serverWasRunning";
+	 // preferences string to get and set popup coordinates on screen
+	 public static final String PREFS_POPUP_X = "popUpX";
+	 public static final String PREFS_POPUP_Y = "popUpY";
 }

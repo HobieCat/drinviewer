@@ -27,6 +27,7 @@ import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CLabel;
@@ -43,6 +44,7 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
@@ -59,7 +61,7 @@ import com.drinviewer.common.Constants;
  *
  */
 public class NotifierDialog {
-    // how long the the tray popup is displayed after fading in (in milliseconds)
+    // how long the tray popup is displayed after fading in (in milliseconds)
     private final int   DISPLAY_TIME  = 4500;
     // how long each tick is when fading in (in ms)
     private final int   FADE_TIMER    = 50;
@@ -99,37 +101,46 @@ public class NotifierDialog {
 		this._display = _display;
 		_activeShells = new ArrayList<Shell>();
 	}
-
-	public void notify(String title, String message, byte[] imageData) {
-
-		// hidden shell used to hide the popup to appear as a desktop window
+    
+    /**
+     * builds the popup to be displayed
+     * 
+     * @param title title of the popup
+     * @param message message of the popup
+     * @param imageData image of the popup as a byte array
+     * 
+     * @return the builded popup, just set its position and display it
+     */
+    
+    private Shell buildPopUp(String title, String message, byte[] imageData) {
+    	// hidden shell used to hide the popup to appear as a desktop window
 		Shell _hiddenShell = new Shell(_display, SWT.NO_FOCUS | SWT.NO_TRIM);
 		
-        _shell = new Shell(_hiddenShell, SWT.NO_FOCUS | SWT.NO_TRIM | SWT.ON_TOP);
-        _shell.setLayout(new FillLayout());
-        _shell.setForeground(_fgColor);
-        _shell.setBackgroundMode(SWT.INHERIT_DEFAULT);
+        final Shell popUpShell = new Shell(_hiddenShell, SWT.NO_FOCUS | SWT.NO_TRIM | SWT.ON_TOP);    	        
+        popUpShell.setLayout(new FillLayout());
+        popUpShell.setForeground(_fgColor);
+        popUpShell.setBackgroundMode(SWT.INHERIT_DEFAULT);
         
-        _shell.addListener(SWT.Dispose, new Listener() {
+        popUpShell.addListener(SWT.Dispose, new Listener() {
             @Override
             public void handleEvent(Event event) {
-                _activeShells.remove(_shell);
+                _activeShells.remove(popUpShell);
             }
         });
 
-        final Composite inner = new Composite(_shell, SWT.NONE);
+        final Composite inner = new Composite(popUpShell, SWT.NONE);
 
         GridLayout gl = new GridLayout(2, false);
         gl.marginHeight = MARGIN;
         gl.marginWidth = MARGIN;
 
         inner.setLayout(gl);
-        _shell.addListener(SWT.Resize, new Listener() {
+        popUpShell.addListener(SWT.Resize, new Listener() {
             @Override
             public void handleEvent(Event e) {
                 try {
                     // get the size of the drawing area
-                    Rectangle rect = _shell.getClientArea();
+                    Rectangle rect = popUpShell.getClientArea();
                     // create a new image with that size
                     Image newImage = new Image(Display.getDefault(), Math.max(1, rect.width), rect.height);
                     // create a GC object we can use to draw with
@@ -147,7 +158,7 @@ public class NotifierDialog {
                     // remember to dispose the GC object!
                     gc.dispose();
                     // now set the background image on the shell
-                    _shell.setBackgroundImage(newImage);
+                    popUpShell.setBackgroundImage(newImage);
                 } catch (Exception err) {
                     err.printStackTrace();
                 }
@@ -203,7 +214,7 @@ public class NotifierDialog {
         text.setForeground(_fgColor);
         text.setText(message);
 
-        if (_display == null) { return; }
+        if (_display == null) { return null; }
         Rectangle clientArea = _display.getClientArea();
 
         // fix the popup width
@@ -218,29 +229,173 @@ public class NotifierDialog {
         }
         
         // set popup size
-        _shell.setSize(popupWidth, minHeight);
+        popUpShell.setSize(popupWidth, minHeight);
+        
+        return popUpShell;
+    	
+    }
 
-        //TODO: if no popup coordinates are set in the preferences
+    /**
+     * gets the popup coordinates stored in the shared preferences
+     * 
+     * @return the retrieved point or null if none is found
+     */
+    private Point getPositionFromPrefs() {
+    	Preferences prefs = Preferences.userRoot().node(this.getClass().getName());
+    	
+    	int x = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_X, -1);
+    	int y = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_Y, -1);
+    	
+    	if (x!=-1 && y!=-1) {
+    		return new Point(x,y);
+    	} else {
+    		return null;
+    	}
+    }
+
+    /**
+     * sets the popup coordinates in the shared preferences
+     * 
+     * @param position the point to set
+     */
+    private void setPositionInPrefs(Point position) {
+    	Preferences prefs = Preferences.userRoot().node(this.getClass().getName());
+    	if (position.x < 0) position.x = 0;
+    	if (position.y < 0) position.y = 0;
+    	prefs.putInt(DesktopDrinViewerConstants.PREFS_POPUP_X, position.x);
+    	prefs.putInt(DesktopDrinViewerConstants.PREFS_POPUP_Y, position.y);
+    }
+    
+    /**
+     * shows a popup to let the user choose its position
+     * 
+     * @param title title of the popup
+     * @param message message of the popup
+     * @param imageData image of the popup as a byte array
+     */
+    public void showToSetPosition (String title, String message, byte[] imageData) {
+		// get a popup
+		final Shell popup = buildPopUp(title, message, imageData);
+		// this popup always goes at bottom right of screen
+		Rectangle clientArea = _display.getClientArea();
+		
         // set popup start coordinates
-        int startX = clientArea.x + clientArea.width - popupWidth - 1;
-        // 650 is an arbitrary Y
-        int startY = 650 + (_activeShells.size() * minHeight);
+		int startX;
+		int startY;
+		Point popUpPos = getPositionFromPrefs();
+		
+		if (popUpPos != null) {
+			startX = popUpPos.x;
+			startY = popUpPos.y;
+		} else {
+			startX = clientArea.x + clientArea.width - popup.getSize().x - 1;
+	        startY = (clientArea.height - popup.getSize().y - 1) + (_activeShells.size() * popup.getSize().y);			
+		}
+		popup.setLocation(startX, startY);
+
+		// add move shell around and save position on double click
+		Listener l = new Listener() {
+			Point origin;
+			public void handleEvent(Event e) {
+				switch (e.type) {
+				case SWT.MouseDown:
+					origin = new Point(e.x, e.y);
+					break;
+				case SWT.MouseUp:
+					origin = null;
+					break;
+				case SWT.MouseMove:
+					if (origin != null) {
+						Point p = _display.map(popup, null, e.x, e.y);
+						popup.setLocation(p.x - origin.x, p.y - origin.y);
+					}
+					break;
+				case SWT.MouseDoubleClick:
+					Point p = _display.map(popup, null, e.x, e.y);
+					setPositionInPrefs(new Point(p.x - origin.x, p.y - origin.y));
+					popup.close();				
+					break;
+				}
+			}
+		};
+
+		/**
+		 * looks like SWT does not propagate the events,
+		 * so event listener must be added for each Composite child
+		 */
+		for (Object cc : popup.getChildren()) {
+			if (cc instanceof Composite) {
+				((Composite) cc).addListener(SWT.MouseDown, l);
+				((Composite) cc).addListener(SWT.MouseUp, l);
+				((Composite) cc).addListener(SWT.MouseMove, l);
+				((Composite) cc).addListener(SWT.MouseDoubleClick, l);
+				for (Control child : ((Composite) cc).getChildren()) {
+					child.addListener(SWT.MouseDown, l);
+					child.addListener(SWT.MouseUp, l);
+					child.addListener(SWT.MouseMove, l);
+					child.addListener(SWT.MouseDoubleClick, l);
+				}
+			}
+		}
+		popup.open();
+		popup.setAlpha(FINAL_ALPHA);
+		popup.setVisible(true);
+    }
+    
+    /**
+     * show the DrinViewer popup, disappearing after
+     * DISPLAY_TIME secs with fadeIn and fadeOut effect
+     * 
+     * @param title title of the popup
+     * @param message message of the popup
+     * @param imageData image of the popup as a byte array
+     * 
+     */
+	public void notify(String title, String message, byte[] imageData) {
+
+		// get the popup
+		_shell = buildPopUp(title, message, imageData);
+		
+		if (_display == null || _shell == null) { return ; }
+		
+        Rectangle clientArea = _display.getClientArea();	
+		int popUpHeight = _shell.getSize().y;
+		int popUpWidth  = _shell.getSize().x;
+		
+        // set popup start coordinates
+		int startX;
+		int startY;
+		Point popUpPos = getPositionFromPrefs();
+		
+		if (popUpPos != null) {
+			startX = popUpPos.x;
+			startY = popUpPos.y;
+		} else {
+			startX = clientArea.x + clientArea.width - popUpWidth - 1;
+	        startY = (clientArea.height - popUpHeight - 1) + (_activeShells.size() * popUpHeight);			
+		}
         
         boolean forceMoveUp = false;
         
         // if the bottom of the popup will fall below the screen...
-        if (startY + minHeight >= clientArea.height) {
+        // fix it so that it'll be fully visible
+        if (startY + popUpHeight >= clientArea.height) {
         	if (!_activeShells.isEmpty()) {
-        		// if there is at least one poup, place the new one
+        		// if there is at least one popup, place the new one
         		// at the same y of the last popup
         		startY = _activeShells.get(_activeShells.size()-1).getLocation().y;
             	forceMoveUp = true;
         	} else {
         		// if there are no popups, place the
         		// new one at the very bottom of the screen
-        		startY = clientArea.y + clientArea.height - minHeight;
+        		startY = clientArea.y + clientArea.height - popUpHeight;
         	}
-        	
+        }
+        
+        // if the right of the popup will fall below the screen...
+        // fix it so that it'll be fully visible
+        if (startX + popUpWidth >= clientArea.width) {
+        	startX = clientArea.x + clientArea.width - popUpWidth - 1;
         }
         
         // move other shells up
@@ -249,8 +404,8 @@ public class NotifierDialog {
             Collections.reverse(modifiable);
             for (Shell shell : modifiable) {
                 Point curLoc = shell.getLocation();
-                shell.setLocation(curLoc.x, curLoc.y - minHeight - BORDER);
-                if (curLoc.y - minHeight - BORDER < 0) {
+                shell.setLocation(curLoc.x, curLoc.y - popUpHeight - BORDER);
+                if (curLoc.y - popUpHeight - BORDER < 0) {
                     _activeShells.remove(shell);
                     shell.dispose();
                 }

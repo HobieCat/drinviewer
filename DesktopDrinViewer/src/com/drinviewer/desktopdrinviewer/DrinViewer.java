@@ -22,6 +22,7 @@ package com.drinviewer.desktopdrinviewer;
 
 import java.net.BindException;
 import java.text.MessageFormat;
+import java.util.prefs.Preferences;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
@@ -49,8 +50,16 @@ public class DrinViewer {
 	 * port used for communication, if not passed from the command line, use the default
 	 */
 	private static int port = Constants.PORT;
+	
+	/**
+	 * Preferences object used to store:
+	 * - status of the server (running or not)
+	 * - position of the popup defined by user
+	 * 
+	 */
+	private Preferences prefs;
 
-	public static void main(String[] args) {
+	public void runApplication(String[] args) {
 		// if an argument is passed, it's the comm port
 		if (args.length > 0) {
 			for (int i = 0; i < args.length; i++) {
@@ -59,13 +68,17 @@ public class DrinViewer {
 			}
 		}
 		
+		prefs = Preferences.userRoot().node(this.getClass().getName());
+		boolean serverWasRunning = prefs.getBoolean(DesktopDrinViewerConstants.PREFS_SERVER, true);
+		
 		final Display display = new Display();
 		final Shell shell = new Shell(display);
 		final Menu menu = new Menu(shell, SWT.POP_UP);
 
 		// icon image for the system tray
-		Image normalImage = new Image(display, new DrinImageLoader("icon.png").data[0]);
-		Image highlightImage = normalImage;
+		final Image normalImage = new Image(display, new DrinImageLoader("icon.png").data[0]);
+		final Image disabledImage = new Image(display, new DrinImageLoader("icon-off.png").data[0]);
+		final Image highlightImage = normalImage;
 
 		final Tray tray = display.getSystemTray();
 		
@@ -74,7 +87,7 @@ public class DrinViewer {
 		 */
 		final DesktopServer ds = new DesktopServer();
 		try {
-			ds.startServer();
+			if (serverWasRunning) ds.startServer();
 		} catch (BindException e) {
 			alreadyRunningError(shell);
 		}
@@ -103,7 +116,11 @@ public class DrinViewer {
 			System.out.println(DesktopDrinViewerConstants.i18nMessages.getString("trayerror"));
 		} else {
 			final TrayItem item = new TrayItem(tray, SWT.NONE);
-			item.setToolTipText(Constants.APPNAME+" "+Constants.APPVERSION);
+			final String baseToolTipText = Constants.APPNAME+" "+Constants.APPVERSION; 
+			item.setToolTipText(baseToolTipText+" - " + 
+					((serverWasRunning) ? 
+							DesktopDrinViewerConstants.i18nMessages.getString("enabled") : 
+							DesktopDrinViewerConstants.i18nMessages.getString("disabled")));
 
 			/**
 			 * selection event listener
@@ -135,12 +152,15 @@ public class DrinViewer {
 			 * start server menu item implementation
 			 */
 			startServer.setText(DesktopDrinViewerConstants.i18nMessages.getString("startserver"));
-			startServer.setEnabled(false);
+			startServer.setEnabled(!serverWasRunning);
 			startServer.addListener(SWT.Selection, new Listener() {
 				@Override
 				public void handleEvent(Event event) {
-					try {
+					try {						
 						ds.startServer();
+						prefs.putBoolean(DesktopDrinViewerConstants.PREFS_SERVER, true);
+						item.setImage(normalImage);
+						item.setToolTipText(baseToolTipText+" - "+DesktopDrinViewerConstants.i18nMessages.getString("enabled"));
 					} catch (BindException e) {
 						alreadyRunningError(shell);
 					}
@@ -153,12 +173,33 @@ public class DrinViewer {
 			 * stop server menu item implementation
 			 */
 			stopServer.setText(DesktopDrinViewerConstants.i18nMessages.getString("stopserver"));
+			stopServer.setEnabled(serverWasRunning);			
 			stopServer.addListener(SWT.Selection, new Listener() {
 				@Override
 				public void handleEvent(Event event) {
 					ds.stopServer();
+					prefs.putBoolean(DesktopDrinViewerConstants.PREFS_SERVER, false);
+					item.setImage(disabledImage);
+					item.setToolTipText(baseToolTipText+" - "+DesktopDrinViewerConstants.i18nMessages.getString("disabled"));
 					stopServer.setEnabled(false);
 					startServer.setEnabled(true);
+				}
+			});
+			
+			/**
+			 * set popup position menu item
+			 */
+			MenuItem popupPosition = new MenuItem(menu, SWT.PUSH);
+			popupPosition.setText(DesktopDrinViewerConstants.i18nMessages.getString("setpopupposition"));
+			popupPosition.addListener(SWT.Selection, new Listener() {
+				@Override
+				public void handleEvent(Event event) {
+					display.asyncExec(new Runnable() {
+					    public void run() {
+					    	ndlg.showToSetPosition(DesktopDrinViewerConstants.i18nMessages.getString("popuptitle"),
+					    			DesktopDrinViewerConstants.i18nMessages.getString("popuptext"), null);					    	
+					    }
+					});
 				}
 			});
 			
@@ -172,11 +213,12 @@ public class DrinViewer {
 				public void handleEvent(Event event) {
 					display.asyncExec(new Runnable() {
 					    public void run() {
-					    	ndlg.notify("Incoming Call", "Test Number:\n+39-666-666-66-66",null);
+					    	 ndlg.notify("Incoming Call", "Test Number:\n+39-666-666-66-66",null);
 					    }
 					});
 				}
 			});
+			
 			// separator before exit
 			new MenuItem(menu, SWT.SEPARATOR);
 			
@@ -195,7 +237,9 @@ public class DrinViewer {
 			/**
 			 * set the icon images for the systray item
 			 */
-			item.setImage(normalImage);
+			if (serverWasRunning) item.setImage(normalImage);
+			else item.setImage(disabledImage);
+			
 			item.setHighlightImage(highlightImage);
 		}
 
@@ -212,6 +256,7 @@ public class DrinViewer {
 		 */
 		highlightImage.dispose();
 		normalImage.dispose();
+		disabledImage.dispose();
 		display.dispose();
 	}
 	
@@ -235,5 +280,9 @@ public class DrinViewer {
 		dialog.setMessage(output);
 		dialog.open(); 
 		System.exit(-1);		
+	}
+	
+	public static void main(String[] args) {
+		new DrinViewer().runApplication(args);		
 	}
 }

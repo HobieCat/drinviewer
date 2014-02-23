@@ -372,8 +372,10 @@ public class NotifierDialog {
 			startY = popUpPos.y;
 		} else {
 			startX = clientArea.x + clientArea.width - popUpWidth - 1;
-	        startY = (clientArea.height - popUpHeight - 1) + (_activeShells.size() * popUpHeight);			
+	        startY = (clientArea.height - popUpHeight - 1);			
 		}
+		
+		startY += (_activeShells.size() * popUpHeight);
         
         boolean forceMoveUp = false;
         

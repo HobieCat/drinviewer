@@ -41,7 +41,6 @@ public class ServerDBManager {
 	
 	/**
 	 * the connection to the database
-	 * 
 	 */
 	private Connection c;
 	
@@ -52,19 +51,23 @@ public class ServerDBManager {
 	private String connectionString;
 	
 	/**
-	 * the filename of the database
-	 * 
+	 * application path where to save the DB file
 	 */
-	public static final String DB_FILENAME = "testDesktop.db";
+	private String appSavePath;
+	
+	/**
+	 * the filename of the database
+	 */
+	public static final String DB_FILENAME = "drinViewer.db";
 	
 	/**
 	 * database version
-	 * 
 	 */
 	private static final String DB_VERSION = "0.0.1";
 
 	public ServerDBManager() {
-		connectionString = "jdbc:sqlite:"+DB_FILENAME;
+		appSavePath = DesktopDrinViewerConstants.getAppSaveDir();
+		connectionString = "jdbc:sqlite:"+ appSavePath + "/" + DB_FILENAME;
 		createIfNotExists();		
 		if (!checkDBVersion()) updateDB();		
 	}
@@ -126,10 +129,8 @@ public class ServerDBManager {
 	private void createIfNotExists ()
 	{
 		try {
-			// TODO: find an appropriate, per user path to store the db
-			String path = new File(".").getCanonicalPath();
-			File f = new File (path+"/"+DB_FILENAME);			
-			if (!f.exists())
+			File f = new File (appSavePath+"/"+DB_FILENAME);
+			if (!f.exists() && !f.isFile())
 			{
 				// copy the DB from the resources
 				InputStream is = ServerDBManager.class.getClassLoader().getResourceAsStream(DB_FILENAME);

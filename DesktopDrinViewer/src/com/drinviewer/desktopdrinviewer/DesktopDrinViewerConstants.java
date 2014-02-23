@@ -19,6 +19,7 @@
  */
 package com.drinviewer.desktopdrinviewer;
 
+import java.io.File;
 import java.util.ResourceBundle;
 
 import com.drinviewer.common.Constants;
@@ -38,4 +39,41 @@ public class DesktopDrinViewerConstants extends Constants {
 	 // preferences string to get and set popup coordinates on screen
 	 public static final String PREFS_POPUP_X = "popUpX";
 	 public static final String PREFS_POPUP_Y = "popUpY";
+	 
+	 public static String getAppSaveDir()
+	 {
+		 String workingDirectory = null;
+		 String OS = (System.getProperty("os.name")).toUpperCase();
+		//to determine what the workingDirectory is.
+		//if it is some version of Windows
+		if (OS.contains("WIN"))
+		{
+		    //it is simply the location of the "AppData" folder
+		    workingDirectory = System.getenv("AppData");
+		}
+		//Otherwise, we assume Linux or Mac
+		else
+		{
+		    //in either case, we would start in the user's home directory
+		    workingDirectory = System.getProperty("user.home");
+		    if (OS.contains("MAC")) {
+			    //if we are on a Mac, we are not done, we look for "Application Support"
+			    workingDirectory += "/Library/Application Support";	
+		    } else if (OS.contains("LINUX")) {
+		    	workingDirectory += "/.local/share";
+		    }
+		}
+		
+		if (workingDirectory!=null)
+		{
+			workingDirectory += "/" + Constants.APPNAME;
+			File f = new File(workingDirectory);
+			if (!f.exists() && !f.isDirectory()) {
+			    if (!new File(workingDirectory).mkdirs()) {
+			    	return ".";
+			    }
+			}
+		}		
+		return workingDirectory;
+	 }
 }

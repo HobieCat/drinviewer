@@ -71,6 +71,9 @@ public class DrinViewer {
 		prefs = Preferences.userRoot().node(this.getClass().getName());
 		boolean serverWasRunning = prefs.getBoolean(DesktopDrinViewerConstants.PREFS_SERVER, true);
 		
+		Display.setAppName(Constants.APPNAME);
+		Display.setAppVersion(Constants.APPVERSION);		
+		
 		final Display display = new Display();
 		final Shell shell = new Shell(display);
 		final Menu menu = new Menu(shell, SWT.POP_UP);
@@ -83,6 +86,45 @@ public class DrinViewer {
 		final Tray tray = display.getSystemTray();
 		
 		/**
+		 * OSX platform specific initialization for the about menu
+		 */
+        if (System.getProperty("os.name").toUpperCase().contains("MAC")) {
+        	/**
+        	 * Listener for quit action
+        	 */
+        	Listener quitListener = new Listener() {
+				@Override
+				public void handleEvent(Event arg0) {
+					shell.dispose();
+				}
+			};
+			/**
+			 * Listener for about action
+			 */
+			Listener aboutAction = new Listener() {
+				@Override
+				public void handleEvent(Event arg0) {
+					// create dialog with OK button and information icon
+					MessageBox dialog = new MessageBox(shell, SWT.ICON_INFORMATION | SWT.OK );
+					dialog.setText(Constants.APPNAME+" v"+Constants.APPVERSION);
+					dialog.setMessage(DesktopDrinViewerConstants.i18nMessages.getString("abouttext"));
+					dialog.open(); 
+				}
+			};
+			/**
+			 * Listener for preferences action
+			 */
+			Listener preferencesAction = new Listener() {
+				@Override
+				public void handleEvent(Event arg0) {
+				}
+			};
+			
+			// pass it all to the CocoaUIEnhancer
+        	new CocoaUIEnhancer(Constants.APPNAME).hookApplicationMenu(display, quitListener, aboutAction, preferencesAction);			
+        } // end osx platform specific stuff
+		
+		/**
 		 * THE SERVER OBJECT
 		 */
 		final DesktopServer ds = new DesktopServer();
@@ -92,7 +134,7 @@ public class DrinViewer {
 			alreadyRunningError(shell);
 		}
 		
-		/*
+		/**
 		 * THE NOTIFIER (aka POPUP) DIALOG
 		 */
 		final NotifierDialog ndlg = new NotifierDialog(display);
@@ -219,7 +261,7 @@ public class DrinViewer {
 				}
 			});
 			
-			// separator before exit
+			// separator before exit menu item
 			new MenuItem(menu, SWT.SEPARATOR);
 			
 			/**
@@ -274,15 +316,15 @@ public class DrinViewer {
 						Integer.toString(port)
 				});
 		
-		// create dialog with ok button and error icon
+		// create dialog with OK button and error icon
 		MessageBox dialog = new MessageBox(shell, SWT.ICON_ERROR | SWT.OK );
 		dialog.setText(Constants.APPNAME+" v"+Constants.APPVERSION);
 		dialog.setMessage(output);
-		dialog.open(); 
-		System.exit(-1);		
+		dialog.open();
+		System.exit(-1);
 	}
 	
 	public static void main(String[] args) {
-		new DrinViewer().runApplication(args);		
+		new DrinViewer().runApplication(args);
 	}
 }

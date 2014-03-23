@@ -485,6 +485,7 @@ public class NotifierDialog {
                         _shell.setAlpha(0);
                         
                         removeShell(_shell);
+                        return;
                     }
 
                     _shell.setAlpha(cur);

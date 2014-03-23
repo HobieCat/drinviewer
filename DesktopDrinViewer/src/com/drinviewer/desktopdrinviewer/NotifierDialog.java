@@ -469,8 +469,9 @@ public class NotifierDialog {
     }
 
     private void fadeOut(final Shell _shell) {
+    	
         final Runnable run = new Runnable() {
-
+        	
             @Override
             public void run() {
                 try {
@@ -483,15 +484,22 @@ public class NotifierDialog {
                     	_shell.setVisible(false);
                         _shell.setAlpha(0);
                         
-                        System.out.println("Removing active shell");
-                        _activeShells.remove(_shell);
-                        _shell.dispose();
-                        return;
+                        removeShell(_shell);
                     }
 
                     _shell.setAlpha(cur);
-
-                    Display.getDefault().timerExec(FADE_TIMER, this);
+                    
+                    if (cur != _shell.getAlpha()) {
+                    	/**
+                    	 * shell alpha did not change, remove it without fadeOut
+                    	 */
+                    	removeShell(_shell);
+                    } else {
+                    	/**
+                    	 * go on with fadeOut effect
+                    	 */
+                    	Display.getDefault().timerExec(FADE_TIMER, this);
+                    }
 
                 } catch (Exception err) {
                     err.printStackTrace();
@@ -500,5 +508,12 @@ public class NotifierDialog {
 
         };
         Display.getDefault().timerExec(FADE_TIMER, run);
+    }
+    
+    private void removeShell(final Shell _shell) {
+        System.out.println("Removing active shell");
+        _activeShells.remove(_shell);
+        _shell.dispose();
+        return;
     }
 }

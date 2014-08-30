@@ -122,6 +122,7 @@ public class DrinViewerActivity extends FragmentActivity {
 						}
 					}
 					break;
+				case DroidDrinViewerConstants.MSG_COLLECTION_INIT:
 				case DroidDrinViewerConstants.MSG_SERVER_FOUND:
 					slFragment.getAdapter().notifyDataSetChanged();
 					break;

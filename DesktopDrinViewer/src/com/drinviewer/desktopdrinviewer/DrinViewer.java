@@ -106,7 +106,11 @@ public class DrinViewer {
 			public void handleDrin(final IncomingDrinEvent event) {
 				display.asyncExec(new Runnable() {
 				    public void run() {
-				    	ndlg.notify(event.title, event.message, event.imageData);
+				    	if (event.action == Constants.SHOW_POPUP) {
+				    		ndlg.notify(event.title, event.message, event.imageData, false);
+				    	} else if (event.action == Constants.REMOVE_POPUP) {
+				    		ndlg.removeNotify(event.title, event.message);
+				    	}
 				    }
 				});
 			}
@@ -207,13 +211,13 @@ public class DrinViewer {
 			 * test notification menu item
 			 */
 			MenuItem testNotify = new MenuItem(menu, SWT.PUSH);
-			testNotify.setText("Test Notification");
+			testNotify.setText(DesktopDrinViewerConstants.i18nMessages.getString("testnotify"));
 			testNotify.addListener(SWT.Selection, new Listener() {
 				@Override
 				public void handleEvent(Event event) {
 					display.asyncExec(new Runnable() {
 					    public void run() {
-					    	 ndlg.notify("Incoming Call", "Test Number:\n+39-666-666-66-66",null);
+					    	 ndlg.notify("Incoming Call", "Test Number:\n+39-666-666-66-66",null, true);
 					    }
 					});
 				}

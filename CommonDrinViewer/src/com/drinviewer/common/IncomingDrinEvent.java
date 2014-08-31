@@ -32,7 +32,7 @@ public class IncomingDrinEvent extends EventObject {
 	/**
 	 * serial version ID
 	 */
-	private static final long serialVersionUID = 1213150563549939051L;
+	private static final long serialVersionUID = 6432351239920679897L;
 
 	/**
 	 * the title to be displayed in the popup
@@ -52,22 +52,29 @@ public class IncomingDrinEvent extends EventObject {
 	public byte[] imageData;
 	
 	/**
+	 * request desktop action code
+	 */
+	public int action;
+	
+	/**
 	 * Instantiate the class
 	 * 
 	 * @param source the source generator object
 	 * @param title the title to be displayed in the popup
 	 * @param message the message to be displayed in the popup
 	 * @param imageData the imagedata to be displayed in the popup
+	 * @param action the action code to be sent
 	 */
-	public IncomingDrinEvent(Object source, String title, String message, byte[] imageData) {
+	public IncomingDrinEvent(Object source, String title, String message, byte[] imageData, int action) {
 		super(source);
 		this.title = title;
 		this.message = message;
 		this.imageData = imageData;
+		this.action = action;
 	}
 	
-	public IncomingDrinEvent(Object source, String title, String message) {
-		this(source, title, message, null);
+	public IncomingDrinEvent(Object source, String title, String message, int action) {
+		this(source, title, message, null, action);
 	}
 	
 	

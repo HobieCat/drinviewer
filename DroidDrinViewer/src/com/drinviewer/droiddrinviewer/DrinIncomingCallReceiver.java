@@ -26,16 +26,19 @@ import android.content.BroadcastReceiver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences.Editor;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 
+import com.drinviewer.common.Constants;
 import com.drinviewer.common.HostData;
 import com.drinviewer.common.IncomingDrinEvent;
 
@@ -115,11 +118,18 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
     	 * The hostCollection as given by the DiscoverServerService
     	 */
     	private DrinHostCollection hostCollection;
+    	
+    	/**
+    	 * true if the phone was ringing
+    	 */
+    	private boolean wasRinging = false;
 
         public DrinPhoneStateListener(Context context, DrinHostCollection hostCollection) {
 			super();
 			this.context = context;
 			this.hostCollection = hostCollection;
+			// get wasRinging state from SharedPreferences
+	        wasRinging = PreferenceManager.getDefaultSharedPreferences(context).getBoolean(Constants.APPNAME+"wasRinging", false);
 		}
 
         /**
@@ -132,7 +142,7 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
         	/**
         	 * contactId used to query for contact image
         	 */
-			String contactId = null;
+			long contactId = 0L;
 			
 			/**
 			 * Caller's name
@@ -149,7 +159,10 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
 			 */
 			byte[] imgData = null;
 			
-            if (state == TelephonyManager.CALL_STATE_RINGING) {
+            if ( state == TelephonyManager.CALL_STATE_RINGING || 
+            	 (wasRinging && 
+                 (state == TelephonyManager.CALL_STATE_OFFHOOK || state == TelephonyManager.CALL_STATE_IDLE))
+               ) {
             	/**
             	 * Lookup caller's Name and Picture from the AddressBook
             	 */
@@ -168,11 +181,11 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
             	if (cursor.moveToFirst()) {
             		
             	    // Get values from contacts database:
-            	    contactId = cursor.getString(cursor.getColumnIndex(ContactsContract.PhoneLookup._ID));
+            	    contactId = cursor.getLong(cursor.getColumnIndex(ContactsContract.Contacts._ID));
             	    name =      cursor.getString(cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME));
 
             	    // Get photo of contactId as input stream:
-            	    Uri uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, Long.parseLong(contactId));
+            	    Uri uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId);
             	    photoIS = ContactsContract.Contacts.openContactPhotoInputStream(context.getContentResolver(), uri);
             	    // If a photo is found, get it as a PNG and build its ByteArray
             	    if (photoIS!=null) {
@@ -190,7 +203,17 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
             	/**
             	 * Build the IncomingDrinEvent and send it to all paired servers
             	 */
-            	final IncomingDrinEvent event = new IncomingDrinEvent(this, name, incomingNumber, imgData);
+            	int action = Constants.NO_ACTION;
+            	
+            	if (state == TelephonyManager.CALL_STATE_RINGING) {
+            		wasRinging = true;
+            		action = Constants.SHOW_POPUP;
+            	} else if (state == TelephonyManager.CALL_STATE_OFFHOOK || state == TelephonyManager.CALL_STATE_IDLE) {
+            		wasRinging = false;
+            		action = Constants.REMOVE_POPUP;
+            	}
+            	
+            	final IncomingDrinEvent event = new IncomingDrinEvent(this, name, incomingNumber, imgData, action);
             	
             	for (int i=0; i<hostCollection.size();i++) {
             		final HostData currentHost = hostCollection.get(i);
@@ -210,7 +233,14 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
         				}).start();
             		}
             	}
+            } else if (wasRinging) {
+            	wasRinging = false;
             }
+            // Save wasRinging state to SharedPreferences
+            Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
+            editor.putBoolean(Constants.APPNAME+"wasRinging", wasRinging);
+            editor.commit();
+
             // Once the event has been sent, deregister the TelephonyManager
             deregisterTelephonyManager (tManager);
         }

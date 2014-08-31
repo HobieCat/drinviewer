@@ -62,7 +62,9 @@ import com.drinviewer.common.Constants;
  */
 public class NotifierDialog {
     // how long the tray popup is displayed after fading in (in milliseconds)
-    private final int   DISPLAY_TIME  = 4500;
+    private final int   DISPLAY_TIME  = 60000;
+ // how long the tray TEST popup is displayed after fading in (in milliseconds)
+    private final int   TEST_DISPLAY_TIME  = 4500;    
     // how long each tick is when fading in (in ms)
     private final int   FADE_TIMER    = 50;
     // how long each tick is when fading out (in ms)
@@ -230,6 +232,9 @@ public class NotifierDialog {
         
         // set popup size
         popUpShell.setSize(popupWidth, minHeight);
+        // set popup text hidden because of the layout but useful
+        // to discover the popup to remove in removeNotify method
+        popUpShell.setText(message);
         
         return popUpShell;
     	
@@ -349,9 +354,10 @@ public class NotifierDialog {
      * @param title title of the popup
      * @param message message of the popup
      * @param imageData image of the popup as a byte array
+     * @param isTestNotify true if is the test notification popup
      * 
      */
-	public void notify(String title, String message, byte[] imageData) {
+	public void notify(String title, String message, byte[] imageData, boolean isTestNotify) {
 
 		// get the popup
 		_shell = buildPopUp(title, message, imageData);
@@ -418,10 +424,16 @@ public class NotifierDialog {
         _shell.setAlpha(0);
         _shell.setVisible(true);
         _activeShells.add(_shell);
-        fadeIn(_shell);
+        fadeIn(_shell, isTestNotify);
     }
     
-    private void fadeIn(final Shell _shell) {
+	/**
+	 * fades in the popup notificaition
+	 * 
+	 * @param _shell the popup to be faded
+	 * @param isTestNotify true if is the test notification popup
+	 */
+    private void fadeIn(final Shell _shell, final boolean isTestNotify) {
         Runnable run = new Runnable() {
 
             @Override
@@ -434,7 +446,7 @@ public class NotifierDialog {
 
                     if (cur > FINAL_ALPHA) {
                         _shell.setAlpha(FINAL_ALPHA);
-                        startTimer(_shell);
+                        startTimer(_shell, isTestNotify);
                         return;
                     }
 
@@ -449,7 +461,13 @@ public class NotifierDialog {
         Display.getDefault().timerExec(FADE_TIMER, run);
     }
 
-    private void startTimer(final Shell _shell) {
+    /**
+     * delays the fadeout on the popup to be removed
+     * 
+     * @param _shell the popup to be faded
+	 * @param isTestNotify true if is the test notification popup
+     */
+    private void startTimer(final Shell _shell, boolean isTestNotify) {
         Runnable run = new Runnable() {
 
             @Override
@@ -464,10 +482,15 @@ public class NotifierDialog {
             }
 
         };
-        Display.getDefault().timerExec(DISPLAY_TIME, run);
+        Display.getDefault().timerExec(isTestNotify ? TEST_DISPLAY_TIME : DISPLAY_TIME, run);
 
     }
 
+    /**
+     * fades out the popup notification
+     * 
+     * @param _shell the popup to be faded
+     */
     private void fadeOut(final Shell _shell) {
     	
         final Runnable run = new Runnable() {
@@ -511,10 +534,34 @@ public class NotifierDialog {
         Display.getDefault().timerExec(FADE_TIMER, run);
     }
     
+    /**
+     * removes the popup shell from the list of the active shells
+     * 
+     * @param _shell the shell to be removed
+     */
     private void removeShell(final Shell _shell) {
-        System.out.println("Removing active shell");
         _activeShells.remove(_shell);
         _shell.dispose();
         return;
     }
+
+    /**
+     * removes the DrinViewer popup, when user answers
+     * or rejects the call on the mobile counterpart
+     * 
+     * @param title title of the popup
+     * @param message message of the popup
+     * 
+     */
+	public void removeNotify(String title, String message) {
+		if (!_activeShells.isEmpty()) {
+			// look for active shell to be removed
+			for (Shell shell : _activeShells) {
+				if (shell.getText().equalsIgnoreCase(message)) {
+					removeShell (shell);
+					break;
+				}
+			}
+		}
+	}
 }

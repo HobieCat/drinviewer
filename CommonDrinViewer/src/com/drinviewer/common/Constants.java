@@ -81,6 +81,11 @@ public class Constants {
 	// size of the popup icon longest side
 	public static final int    ICON_SIZE = 96;
 	
+	// action codes
+	public static final int	   NO_ACTION = 0;
+	public static final int	   SHOW_POPUP = 1;
+	public static final int	   REMOVE_POPUP = 2;
+	
 	/**
 	 * gets the first available broadcast address for the local network
 	 * 

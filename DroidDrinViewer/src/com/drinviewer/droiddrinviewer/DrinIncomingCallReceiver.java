@@ -173,6 +173,11 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
             	        ContactsContract.PhoneLookup._ID};
             	
             	// 2. Encode phone number and build filter URI
+            	// set incomingNumber to null if it's a call being answered,
+            	// it looks like there's no way of getting the incomingNumber in this case,
+            	// and send the message to the server anyway. He'll know what to do.
+            	if (state==TelephonyManager.CALL_STATE_OFFHOOK) incomingNumber = null;
+            	
             	Uri contactUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(incomingNumber));
             	// 3. Perform the query
             	Cursor cursor = context.getContentResolver().query(contactUri, projection, null, null, null);

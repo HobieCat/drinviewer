@@ -27,13 +27,13 @@ import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
@@ -114,7 +114,7 @@ public class NotifierDialog {
      * @return the builded popup, just set its position and display it
      */
     
-    private Shell buildPopUp(String title, String message, byte[] imageData) {
+    private Shell buildPopUp(final String title, final String message, byte[] imageData) {
     	// hidden shell used to hide the popup to appear as a desktop window
 		Shell _hiddenShell = new Shell(_display, SWT.NO_FOCUS | SWT.NO_TRIM);
 		
@@ -191,10 +191,7 @@ public class NotifierDialog {
         titleLabel.setForeground(_titleFgColor);
         titleLabel.setTopMargin(15);
         // Set title font
-        FontData fd = titleLabel.getFont().getFontData()[0];
-        fd.setStyle(SWT.BOLD);
-        fd.height = 11;
-        titleLabel.setFont(new Font(Display.getDefault(), fd));
+        titleLabel.setFont(new Font(_display, DrinViewer.getNotificationFont(_display, true)));
         
         // compute popup width basing on how long the title is
         // adding an extra "X" char for safety...
@@ -207,10 +204,8 @@ public class NotifierDialog {
 
         // add text to the popup
         Label text = new Label(inner, SWT.WRAP);
-        FontData tfd = text.getFont().getFontData()[0];
-        tfd.setStyle(SWT.BOLD);
-        tfd.height = 8;
-        text.setFont(new Font(Display.getDefault(), tfd));
+        // set text font
+        text.setFont(new Font(_display, DrinViewer.getNotificationFont(_display, false)));
         GridData gd = new GridData(GridData.FILL_BOTH);
         text.setLayoutData(gd);
         text.setForeground(_fgColor);
@@ -236,6 +231,17 @@ public class NotifierDialog {
         // to discover the popup to remove in removeNotify method
         popUpShell.setText(message);
         
+        // add onClick listener to all children to
+        // remove notification on single mouse click
+        propagateListenerToChildren(popUpShell, new Listener() {
+			@Override
+			public void handleEvent(Event event) {
+				if (event.type == SWT.MouseUp) {
+					removeNotify(title, message);
+				}
+			}        	
+        });
+        
         return popUpShell;
     	
     }
@@ -246,7 +252,7 @@ public class NotifierDialog {
      * @return the retrieved point or null if none is found
      */
     private Point getPositionFromPrefs() {
-    	Preferences prefs = Preferences.userRoot().node(this.getClass().getName());
+    	Preferences prefs = DrinViewer.getPreferences();
     	
     	int x = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_X, -1);
     	int y = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_Y, -1);
@@ -264,11 +270,16 @@ public class NotifierDialog {
      * @param position the point to set
      */
     private void setPositionInPrefs(Point position) {
-    	Preferences prefs = Preferences.userRoot().node(this.getClass().getName());
+    	Preferences prefs = DrinViewer.getPreferences();
     	if (position.x < 0) position.x = 0;
     	if (position.y < 0) position.y = 0;
     	prefs.putInt(DesktopDrinViewerConstants.PREFS_POPUP_X, position.x);
     	prefs.putInt(DesktopDrinViewerConstants.PREFS_POPUP_Y, position.y);
+    	try {
+			prefs.flush();
+		} catch (BackingStoreException e) {
+			e.printStackTrace();
+		}
     }
     
     /**
@@ -324,24 +335,7 @@ public class NotifierDialog {
 			}
 		};
 
-		/**
-		 * looks like SWT does not propagate the events,
-		 * so event listener must be added for each Composite child
-		 */
-		for (Object cc : popup.getChildren()) {
-			if (cc instanceof Composite) {
-				((Composite) cc).addListener(SWT.MouseDown, l);
-				((Composite) cc).addListener(SWT.MouseUp, l);
-				((Composite) cc).addListener(SWT.MouseMove, l);
-				((Composite) cc).addListener(SWT.MouseDoubleClick, l);
-				for (Control child : ((Composite) cc).getChildren()) {
-					child.addListener(SWT.MouseDown, l);
-					child.addListener(SWT.MouseUp, l);
-					child.addListener(SWT.MouseMove, l);
-					child.addListener(SWT.MouseDoubleClick, l);
-				}
-			}
-		}
+		propagateListenerToChildren(popup, l);
 		popup.open();
 		popup.setAlpha(FINAL_ALPHA);
 		popup.setVisible(true);
@@ -544,6 +538,30 @@ public class NotifierDialog {
         _shell.dispose();
         return;
     }
+    
+    /**
+     * looks like SWT does not propagate the events,
+     * so event listener must be added for each Composite child
+     * 
+     * @param popup parent popup to receive propagated events
+     * @param l Listener to be propagated
+     */
+    private void propagateListenerToChildren(Shell popup, Listener l) {
+		for (Object cc : popup.getChildren()) {
+			if (cc instanceof Composite) {
+				((Composite) cc).addListener(SWT.MouseDown, l);
+				((Composite) cc).addListener(SWT.MouseUp, l);
+				((Composite) cc).addListener(SWT.MouseMove, l);
+				((Composite) cc).addListener(SWT.MouseDoubleClick, l);
+				for (Control child : ((Composite) cc).getChildren()) {
+					child.addListener(SWT.MouseDown, l);
+					child.addListener(SWT.MouseUp, l);
+					child.addListener(SWT.MouseMove, l);
+					child.addListener(SWT.MouseDoubleClick, l);
+				}
+			}
+		}
+    }
 
     /**
      * removes the DrinViewer popup, when user answers
@@ -555,12 +573,17 @@ public class NotifierDialog {
      */
 	public void removeNotify(String title, String message) {
 		if (!_activeShells.isEmpty()) {
-			// look for active shell to be removed
-			for (Shell shell : _activeShells) {
-				if (shell.getText().equalsIgnoreCase(message)) {
-					removeShell (shell);
-					break;
-				}
+			if (message!=null) {
+				// look for active shell to be removed
+				for (Shell shell : _activeShells) {
+					if (shell.getText().equalsIgnoreCase(message)) {
+						removeShell (shell);
+						break;
+					}
+				}				
+			} else {
+				// remove last active shell
+	            removeShell(_activeShells.get(_activeShells.size()-1));
 			}
 		}
 	}

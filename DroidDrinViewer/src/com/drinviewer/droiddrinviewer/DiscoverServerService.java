@@ -120,6 +120,7 @@ public class DiscoverServerService extends Service {
 			 */
 			sendBroadcastToListeners(DroidDrinViewerConstants.COLLECTION_INIT);
 		}
+		DrinViewerBroadcastReceiver.completeWakefulIntent(intent);
 		return Service.START_NOT_STICKY;
 	}
 	

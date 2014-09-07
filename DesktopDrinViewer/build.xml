@@ -13,7 +13,7 @@
 	<property name="docs.dir" location="docs" />
 	<property name="lib.dir" location="lib" />
 	<property name="resources.dir" location="resources" />
-	<property name="swt.version" value="4.3" />
+	<property name="swt.version" value="4.4" />
 	<property name="sqlite.version" value="3.7.2" />
 	<property name="debuglevel" value="source,lines,vars" />
 	<property name="linux.dist.dir" value="${dist.dir}/linux" />

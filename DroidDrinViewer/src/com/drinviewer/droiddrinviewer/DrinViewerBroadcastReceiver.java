@@ -25,7 +25,7 @@ import java.util.Calendar;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
+import android.support.v4.content.WakefulBroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
@@ -47,7 +47,7 @@ import android.os.RemoteException;
  * @author giorgio
  *
  */
-public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
+public class DrinViewerBroadcastReceiver extends WakefulBroadcastReceiver {
 
 	/**
 	 * used to repeat the discovery at fixed time intervals
@@ -102,7 +102,7 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
     			service.putExtra("wifiBroadcastAddress", wifiBroadcastAddress);
     		}
     		
-    		context.startService(service);
+    		startWakefulService(context, service);
 	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startalarmrepeater))) {
 	    	/**
 	    	 * start the alarm repeater only if WiFi is connected already
@@ -159,9 +159,11 @@ public class DrinViewerBroadcastReceiver extends BroadcastReceiver {
 					Calendar cal = Calendar.getInstance();
 					// cancel the alarm
 					alarmManager.cancel(pending);
-					// Run the intent at fixed time intervals
+					// Run the intent immediately and schedule repeating at fixed time intervals
+					context.sendBroadcast(i);					
 					alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP,
-							cal.getTimeInMillis(), DroidDrinViewerConstants.DISCOVER_REPEAT_TIME, pending);
+							cal.getTimeInMillis() + DroidDrinViewerConstants.DISCOVER_REPEAT_TIME,
+							DroidDrinViewerConstants.DISCOVER_REPEAT_TIME, pending);
 					returnValue = true;
 				}
 			}

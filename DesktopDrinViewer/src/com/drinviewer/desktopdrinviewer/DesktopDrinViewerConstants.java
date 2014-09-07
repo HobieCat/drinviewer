@@ -39,6 +39,14 @@ public class DesktopDrinViewerConstants extends Constants {
 	 // preferences string to get and set popup coordinates on screen
 	 public static final String PREFS_POPUP_X = "popUpX";
 	 public static final String PREFS_POPUP_Y = "popUpY";
+	 // preferences string to get and set notification font for popup title
+	 public static final String PREFS_TITLEFONTNAME = "TitleFontName";
+	 public static final String PREFS_TITLEFONTSIZE = "TitleFontSize";
+	 public static final String PREFS_TITLEFONTSTYLE = "TitleFontStyle";
+	 // preferences string to get and set notification font for popup text
+	 public static final String PREFS_TEXTFONTNAME = "TextFontName";
+	 public static final String PREFS_TEXTFONTSIZE = "TextFontSize";
+	 public static final String PREFS_TEXTFONTSTYLE = "TextFontStyle";
 	 
 	 public static String getAppSaveDir()
 	 {

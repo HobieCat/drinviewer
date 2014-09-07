@@ -85,6 +85,7 @@ public class Constants {
 	public static final int	   NO_ACTION = 0;
 	public static final int	   SHOW_POPUP = 1;
 	public static final int	   REMOVE_POPUP = 2;
+	public static final int	   SHOW_PAIRED = 3;
 	
 	/**
 	 * gets the first available broadcast address for the local network

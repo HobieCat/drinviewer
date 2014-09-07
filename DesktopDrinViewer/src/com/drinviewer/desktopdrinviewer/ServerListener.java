@@ -186,13 +186,13 @@ public class ServerListener implements Runnable {
 						incomingMessage = Constants.MESSAGE_PAIRME;
 						outgoingMessage = Constants.MESSAGE_PAIRED;
 						actionIsPair = true;
-						fireIncomingDrinEvent(new IncomingDrinEvent(this, Constants.APPNAME, DesktopDrinViewerConstants.i18nMessages.getString("paired"), Constants.SHOW_POPUP));
+						fireIncomingDrinEvent(new IncomingDrinEvent(this, Constants.APPNAME, DesktopDrinViewerConstants.i18nMessages.getString("paired"), Constants.SHOW_PAIRED));
 					} else if (inputLine.startsWith(Constants.MESSAGE_UNPAIRME)) {
 						// it's an unpair request
 						incomingMessage = Constants.MESSAGE_UNPAIRME;
 						outgoingMessage = Constants.MESSAGE_UNPAIRED;
 						actionIsPair = false;
-						fireIncomingDrinEvent(new IncomingDrinEvent(this, Constants.APPNAME, DesktopDrinViewerConstants.i18nMessages.getString("unpaired"), Constants.SHOW_POPUP));
+						fireIncomingDrinEvent(new IncomingDrinEvent(this, Constants.APPNAME, DesktopDrinViewerConstants.i18nMessages.getString("unpaired"), Constants.SHOW_PAIRED));
 					} else if (inputLine.startsWith(Constants.INCOMING_DRIN)) {
 						fireIncomingDrinEvent((IncomingDrinEvent) in.readObject());
 					} else { 					        // handle other kind of messages here

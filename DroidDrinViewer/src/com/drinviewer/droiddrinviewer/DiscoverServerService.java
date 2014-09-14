@@ -154,7 +154,7 @@ public class DiscoverServerService extends Service {
 					/**
 					 * Sends a host discovered event to all listeners
 					 */
-					sendBroadcastToListeners(DroidDrinViewerConstants.HOST_DISCOVERED, hs);
+					if (hs!=null) sendBroadcastToListeners(DroidDrinViewerConstants.HOST_DISCOVERED, hs);
 				}
 			}
 			/**

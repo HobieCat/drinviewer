@@ -122,4 +122,10 @@ public class HostData {
 		
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		return "HostData [hostname=" + hostname + ", address=" + address
+				+ ", isPaired=" + isPaired + "]";
+	}		
 }

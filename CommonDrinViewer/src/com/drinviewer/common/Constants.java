@@ -49,6 +49,8 @@ public class Constants {
 	public static final String DISCOVER_REQUEST = "DISCOVER";
 	// text message valid as a response to a DISCOVER request
 	public static final String DISCOVER_RESPONSE = "DISCOVER_RESPONSE";
+	// discover response end of string
+	public static final String DISCOVER_RESPONSE_END = "DR_EOS";
 	// character to separate the text messages to the (small) data attached
 	public static final String MESSAGE_CHAR_SEPARATOR = ":"; // this is a char indeed, but is more useful as a String
 	// append to the server broadcast sent message if the device is already paired in the DISCOVERY phase

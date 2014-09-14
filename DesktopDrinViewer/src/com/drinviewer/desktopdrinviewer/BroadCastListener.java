@@ -183,6 +183,9 @@ public class BroadCastListener implements Runnable {
 						// if there's a localHostName, put it as second optional message parameter
 			        	if (localHostName!=null) sendMessage += Constants.MESSAGE_CHAR_SEPARATOR + localHostName;
 			        	
+			        	// sendMessage ends here
+			        	sendMessage += Constants.MESSAGE_CHAR_SEPARATOR + Constants.DISCOVER_RESPONSE_END;
+			        	
 			            byte[] sendData = sendMessage.getBytes();
 			 
 			            // send out the response

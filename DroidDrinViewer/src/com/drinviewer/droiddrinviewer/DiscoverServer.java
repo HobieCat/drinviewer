@@ -122,26 +122,26 @@ public class DiscoverServer implements Runnable {
 							socket.send(sendPacket);
 							packetSentInThisLoop = true;
 							// print a message to the user
-							System.out.println(getClass().getName()+">>> Request packet sent to: " + wifiBroadcastAddress);
+//							System.out.println(getClass().getName()+">>> Request packet sent to: " + wifiBroadcastAddress);
 						}
 						
 						// setup stuff and wait for a response
 						if (recvBuf!=null) {
 							if (receivePacket==null) receivePacket = new DatagramPacket(recvBuf, recvBuf.length);
 							else receivePacket.setData(recvBuf);
-							System.out.println(getClass().getName()+">>> Setting timeout to: " + currentTimeOut);
+//							System.out.println(getClass().getName()+">>> Setting timeout to: " + currentTimeOut);
 							// if for some reason the currentTimeOut becomes too big, terminate
 							if (currentTimeOut > DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT) {
 								terminate();
 								break;
 							}
 							socket.setSoTimeout(currentTimeOut);
-							System.out.println(getClass().getName()+">>> loop:"+loopNumber+" Waiting for a packet...");
+//							System.out.println(getClass().getName()+">>> loop:"+loopNumber+" Waiting for a packet...");
 							socket.receive(receivePacket);
 						}
 						
 						// we have a response here, since receive is blocking
-						System.err.println(getClass().getName()+">>> ...got it! :)");
+//						System.err.println(getClass().getName()+">>> ...got it! :)");
 						
 						// looks like network is responding, reset the socket timeout if it was increased
 						if (currentTimeOut > Constants.DISCOVER_TIMEOUT) currentTimeOut = Constants.DISCOVER_TIMEOUT;
@@ -168,49 +168,22 @@ public class DiscoverServer implements Runnable {
 							// if found host is not in the collection, add it and decrease the loop
 							// count so that this host does not count in the total timeout count
 							if (!serverCollection.isInList(foundHost)) {
-								System.err.println(getClass().getName()+">>> ADDING HOST");
+//								System.err.println(getClass().getName()+">>> ADDING HOST");
 								serverCollection.put(foundHost);
 								loopNumber--;
 							}
 						  }
 					    
 					    message = null;
-					    
-						/**
-						 *  USE THE FOLLOWING CODE IF AN ARRAY OF DATA IS TO BE RECEIVED IN A SUBSEQUENT PACKET
-						 */
-					    
-					    /*
-		 			    c.receive(receivePacket);
-						  
-						// deserialize
-						ByteArrayInputStream in = new ByteArrayInputStream(receivePacket.getData());
-						    
-					    String[] mydata = null;
-						    
-						try {
-							mydata = (String[]) new ObjectInputStream(in).readObject();
-						} catch (ClassNotFoundException e) {					
-							e.printStackTrace();
-						}
-						    
-						if (mydata!=null) {
-							for (String mystr : mydata)
-							{
-								System.out.println(mystr);
-							}
-						} else System.out.println("mydata is null :(");
-		 			    */
-					    
 					} catch (SocketTimeoutException e) {
 						// looks like network is slow on responding,
 						// increase the timeout for the next iterations
 							currentTimeOut += currentTimeOut;
-							System.err.println(getClass().getName()+">>> NEW TIME OUT: "+currentTimeOut);
+//							System.err.println(getClass().getName()+">>> NEW TIME OUT: "+currentTimeOut);
 					} finally {
 						if (loopNumber >= Constants.DISCOVERY_BROADCAST_COUNT) {
 							// print a message to the user
-							System.err.println(getClass().getName()+">>> DONE DISCOVERY.");
+//							System.err.println(getClass().getName()+">>> DONE DISCOVERY.");
 							// self terminate, sets running to false
 							terminate();
 						} else {

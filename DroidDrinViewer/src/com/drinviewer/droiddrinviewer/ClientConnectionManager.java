@@ -95,10 +95,10 @@ public class ClientConnectionManager {
 	        out = new ObjectOutputStream(socket.getOutputStream());
 	        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	    } catch (UnknownHostException e) {
-            System.err.println("Don't know about host " + hostToPair.address);
+//            System.err.println("Don't know about host " + hostToPair.address);
             throw e;
         } catch (IOException e) {
-            System.err.println("Couldn't get I/O for the connection to " + hostToPair.address);
+//            System.err.println("Couldn't get I/O for the connection to " + hostToPair.address);
             throw e;
         }
 	}
@@ -185,7 +185,7 @@ public class ClientConnectionManager {
 				}
 			}
 		} catch (SocketTimeoutException e) {
-			System.err.println("Connection has timed out to host " + hostToPair.address);
+//			System.err.println("Connection has timed out to host " + hostToPair.address);
 			throw e;
 		} finally {
 			closeConnection();

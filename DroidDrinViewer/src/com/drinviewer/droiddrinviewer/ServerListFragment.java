@@ -25,6 +25,7 @@ import java.util.TimerTask;
 
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
@@ -166,22 +167,13 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
         /**
-         *  sends a message to the DrinViewerBroadcastReceiver to start the discovery repeat
-         *  this fires an immediate discovery, so there's no need to call the doDiscover method
-         */
-		
-        Intent i = new Intent(mActivity.getBaseContext(), DrinViewerBroadcastReceiver.class);
-        i.setAction(getResources().getString(R.string.broadcast_startalarmrepeater));
-        i.putExtra("forcegetbroadcast", true);
-        mActivity.sendBroadcast(i);
-        
-        /**
-         * Bind the DiscoverServerService if it is not
+         * Bind the DiscoverServerService if it is not, note that the onServiceConnected
+         * method will send a startdiscovery message to the DrinViewerBroadcastReceiver
+         * as soon as the service gets connected at startup
          */
 		if (!isBound) {
 			Intent intent = new Intent(DiscoverServerService.class.getName());
-			//TODO check Context.BIND_AUTO_CREATE
-			isBound = mActivity.getApplication().bindService(intent, this, 0);
+			isBound = mActivity.getApplication().bindService(intent, this, Context.BIND_AUTO_CREATE);
 		}
 	}
 	
@@ -402,7 +394,16 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	public void onServiceConnected(ComponentName name, IBinder service) {
 		// that's how we get the client side of the IPC connection
 		if (discoverServerApi == null) {
-			discoverServerApi = DiscoverServerApi.Stub.asInterface(service);
+			discoverServerApi = DiscoverServerApi.Stub.asInterface(service);			
+	        /**
+	         *  sends a message to the DrinViewerBroadcastReceiver to start the discovery repeat
+	         *  this fires an immediate discovery, so there's no need to call the doDiscover method
+	         */			
+	        Intent i = new Intent(mActivity.getBaseContext(), DrinViewerBroadcastReceiver.class);
+	        i.setAction(getResources().getString(R.string.broadcast_startalarmrepeater));
+	        i.putExtra("forcegetbroadcast", true);
+	        mActivity.sendBroadcast(i);
+	        
 			try {
 				discoverServerApi.addListener(hostUpdatedListener);
 			} catch (RemoteException e) {

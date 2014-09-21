@@ -73,13 +73,13 @@ public class ServerListener implements Runnable {
         try { 
         	serverSocket = new ServerSocket(port);
             while (listening) {
-            	System.out.println("Starting an accept thread");
+//            	System.out.println("Starting an accept thread");
 	            new Thread(new ServerListenerRunnable(serverSocket.accept())).start();
 	        }
 	    } catch (SocketException e) {
 	    	// nothing to do when the close() method is called on the serverSocket
 	    } catch (IOException e) {
-            System.err.println("Could not listen on port " + port);
+//            System.err.println("Could not listen on port " + port);
             System.exit(-1);
         }
 	}

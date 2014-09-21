@@ -95,13 +95,13 @@ public class BroadCastListener implements Runnable {
 			socket.setSoTimeout(500);
 			port = socket.getLocalPort();
 			// print a message to the user
-			System.out.println(getClass().getName() + ">>> " + socket.getClass().getName() + " socket opened on port " + port);
+			// System.out.println(getClass().getName() + ">>> " + socket.getClass().getName() + " socket opened on port " + port);
 			running = true;
 		} catch (BindException e) {
 			throw e;
 		} catch (SocketException e) {
 			e.printStackTrace();
-			System.err.println("Could not open datagaram socket");
+			// System.err.println("Could not open datagaram socket");
 			System.exit(-1);
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
@@ -124,7 +124,7 @@ public class BroadCastListener implements Runnable {
 					DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
 					socket.receive(packet);
 					// a packet has arrived!! print a message to the user
-					System.out.println(getClass().getName() + ">>>Packet received; data: " + new String(packet.getData()));
+					// System.out.println(getClass().getName() + ">>>Packet received; data: " + new String(packet.getData()));
 					// handle the incoming message
 					handleMessage(packet);
 				} catch (SocketTimeoutException e) {
@@ -193,30 +193,10 @@ public class BroadCastListener implements Runnable {
 			            try {
 			            	socket.send(sendPacket);
 			            	// print a message to the user
-			            	System.out.println(this.getClass().getName() + ">>>Sent packet to: " + sendPacket.getAddress().getHostAddress());
+			            	// System.out.println(this.getClass().getName() + ">>>Sent packet to: " + sendPacket.getAddress().getHostAddress());
 			            } catch (IOException e) {
-			            	System.out.println(this.getClass().getName() + ">>>ERROR SENDING PACKET: " + e.getMessage() );
-			            }
-			            
-			            /**
-						 *  USE THE FOLLOWING CODE IF AN ARRAY OF DATA IS TO BE SENT IN A SUBSEQUENT PACKET
-						 */
-			            
-			            /*
-				        // Prepare test data
-				        String[] mydata = { "ciccio", "sarciccio" };				          
-				          
-				        // serialize it
-				        ByteArrayOutputStream out = new ByteArrayOutputStream();
-				        new ObjectOutputStream(out).writeObject(mydata);
-				        sendData = out.toByteArray();
-				          
-				        // send it out
-				        sendPacket = new DatagramPacket(sendData, sendData.length, packet.getAddress(), packet.getPort());
-				        socket.send(sendPacket);
-				        
-				        System.out.println(getClass().getName() + ">>>Sent testdata to: " + sendPacket.getAddress().getHostAddress());
-			            */
+			            	// System.out.println(this.getClass().getName() + ">>>ERROR SENDING PACKET: " + e.getMessage() );
+			            }			            
 	        		} // ends run method
 	        	}).start();
 	        } // ends if message.startsWith

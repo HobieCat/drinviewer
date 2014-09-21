@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
@@ -166,11 +167,13 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
             	/**
             	 * Lookup caller's Name and Picture from the AddressBook
             	 */
+            	// 0. Get a content resolver
+            	ContentResolver cr = context.getContentResolver();
             	
             	// 1. Define the needed columns
             	String[] projection = new String[] {
             	        ContactsContract.PhoneLookup.DISPLAY_NAME,
-            	        ContactsContract.PhoneLookup._ID};
+            	        ContactsContract.Contacts._ID};
             	
             	// 2. Encode phone number and build filter URI
             	// set incomingNumber to null if it's a call being answered,
@@ -180,7 +183,7 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
             	
             	Uri contactUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(incomingNumber));
             	// 3. Perform the query
-            	Cursor cursor = context.getContentResolver().query(contactUri, projection, null, null, null);
+            	Cursor cursor = cr.query(contactUri, projection, null, null, null);
             	
             	// If a phone number is found
             	if (cursor.moveToFirst()) {
@@ -191,7 +194,7 @@ public class DrinIncomingCallReceiver extends BroadcastReceiver {
 
             	    // Get photo of contactId as input stream:
             	    Uri uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId);
-            	    photoIS = ContactsContract.Contacts.openContactPhotoInputStream(context.getContentResolver(), uri);
+            	    photoIS = ContactsContract.Contacts.openContactPhotoInputStream(cr, uri);
             	    // If a photo is found, get it as a PNG and build its ByteArray
             	    if (photoIS!=null) {
             	    	Bitmap photoBMP = BitmapFactory.decodeStream(photoIS);

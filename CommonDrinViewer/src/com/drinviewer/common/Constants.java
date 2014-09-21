@@ -29,7 +29,7 @@ public class Constants {
 	// application name
 	public static final String APPNAME = "DrinViewer";
 	// application version number
-	public static final String APPVERSION = "0.0.1";
+	public static final String APPVERSION = "1.0.0";
 	
 	// default port for communication
 	public static final int    PORT=50001;

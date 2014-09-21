@@ -89,36 +89,37 @@ public class DiscoverServerService extends Service {
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		
-		if (intent.getAction().equals(getResources().getString(R.string.broadcast_startdiscovery))) {
-			// get the wifiBroadcastAddress from intent extra
-			wifiBroadcastAddress = null;
-			Bundle b = intent.getExtras();
-			if (b != null) {
-				wifiBroadcastAddress = b.getString("wifiBroadcastAddress");				
-			}
-			if (wifiBroadcastAddress != null) {
+		if (intent.getAction()!=null) {
+			if (intent.getAction().equals(getResources().getString(R.string.broadcast_startdiscovery))) {
+				// get the wifiBroadcastAddress from intent extra
+				wifiBroadcastAddress = null;
+				Bundle b = intent.getExtras();
+				if (b != null) {
+					wifiBroadcastAddress = b.getString("wifiBroadcastAddress");				
+				}
+				if (wifiBroadcastAddress != null) {
+					/**
+					 * the runDiscover can take some time to complete, it spawns
+					 * its own thread for the DiscoverServer to run but it also
+					 * puts a lock on the discoverLock Object and executes a couple
+					 * of synchronized methods of the DrinHostCollection class.
+					 * Remember that the service always run on the UI thread, so
+					 * to avoid ANR let's run it in a separate thread as well.
+					 */
+					new Thread(new Runnable(){
+						@Override
+						public void run() {
+							runDiscover(wifiBroadcastAddress);
+						}
+					}).start();
+				}
+			} else if (intent.getAction().equals(getResources().getString(R.string.broadcast_cleanhostcollection))) {
+				hostCollection.init();
 				/**
-				 * the runDiscover can take some time to complete, it spawns
-				 * its own thread for the DiscoverServer to run but it also
-				 * puts a lock on the discoverLock Object and executes a couple
-				 * of synchronized methods of the DrinHostCollection class.
-				 * Remeber that the service always run on the UI thread, so
-				 * to avoid ANR let's run it in a separate thread as well.
+				 * Sends a host init event to all listeners
 				 */
-				new Thread(new Runnable(){
-					@Override
-					public void run() {
-						runDiscover(wifiBroadcastAddress);
-					}
-				}).start();
+				sendBroadcastToListeners(DroidDrinViewerConstants.COLLECTION_INIT);
 			}
-		} else if (intent.getAction().equals(getResources().getString(R.string.broadcast_cleanhostcollection))) {
-			hostCollection.init();
-			/**
-			 * Sends a host init event to all listeners
-			 */
-			sendBroadcastToListeners(DroidDrinViewerConstants.COLLECTION_INIT);
 		}
 		DrinViewerBroadcastReceiver.completeWakefulIntent(intent);
 		return Service.START_NOT_STICKY;

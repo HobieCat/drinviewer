@@ -103,6 +103,10 @@ public class DrinViewerBroadcastReceiver extends WakefulBroadcastReceiver {
     		}
     		
     		startWakefulService(context, service);
+    		
+    		if (intent.getBooleanExtra("stopservice", false)) {
+    			context.stopService(service);
+    		}
 	    } else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startalarmrepeater))) {
 	    	/**
 	    	 * start the alarm repeater only if WiFi is connected already
@@ -181,20 +185,18 @@ public class DrinViewerBroadcastReceiver extends WakefulBroadcastReceiver {
 	 */
 	private void stopAlarmRepeater(Context context) {
 		/**
-		 * Sends a message to clean the host collection,
+		 * Sends a message to clean the host collection, and stop the DiscoverServerService
 		 * should be safe because this method gets called on WiFi disconnect
 		 */
 		Intent i = new Intent(context, this.getClass());
 		i.setAction(context.getResources().getString(R.string.broadcast_cleanhostcollection));
+		i.putExtra("stopservice", true);
 		context.sendBroadcast(i);
 		
 		/**
-		 * Cancel the pending intent from the AlarmManager, reusing the same Intent i
-		 * NOTE: This does not fires a start discover, just setting the same action
-		 * used in startAlarmRepeater
+		 * Cancel the pending intent from the AlarmManager
 		 */
-		i.setAction(context.getResources().getString(R.string.broadcast_startdiscovery));
-		PendingIntent senderstop = PendingIntent.getBroadcast(context, 0, i, 0);
+		PendingIntent senderstop = PendingIntent.getBroadcast(context, 0, new Intent(context, this.getClass()), 0);
 		// Get the alarm manager
 		if (alarmManager == null) alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 		alarmManager.cancel(senderstop);

@@ -59,21 +59,33 @@ public class DrinHostAdapter extends BaseAdapter {
 	 */
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
-		LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		View rowView = inflater.inflate(R.layout.serverlistrow, parent, false);
-		TextView serverNameLine = (TextView) rowView.findViewById(R.id.serverNameLine);
-		TextView serverIPLine = (TextView) rowView.findViewById(R.id.serverIPLine);
-		ImageView iconPaired = (ImageView) rowView.findViewById(R.id.iconPaired);
+		
+		ViewHolder viewHolder;
+		 
+		if (convertView==null) {
+			LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+			convertView = inflater.inflate(R.layout.serverlistrow, parent, false);
+			
+			viewHolder = new ViewHolder();
+			
+			viewHolder.serverNameLine =  (TextView) convertView.findViewById(R.id.serverNameLine);
+			viewHolder.serverIPLine = (TextView) convertView.findViewById(R.id.serverIPLine);
+			viewHolder.iconPaired = (ImageView) convertView.findViewById(R.id.iconPaired);
+			
+			convertView.setTag(viewHolder);
+		} else {
+			viewHolder = (ViewHolder) convertView.getTag();
+		}
 		
 		HostData data = hostCollection.get(position);
 		if (data != null) {
-			serverNameLine.setText(data.hostname);
-			serverIPLine.setText(data.address);	
+			viewHolder.serverNameLine.setText(data.hostname);
+			viewHolder.serverIPLine.setText(data.address);	
 			
-			iconPaired.setImageDrawable(context.getResources().getDrawable(
+			viewHolder.iconPaired.setImageDrawable(context.getResources().getDrawable(
 					(data.isPaired) ? android.R.drawable.btn_star_big_on : android.R.drawable.btn_star_big_off ));
 		}
-		return rowView;		
+		return convertView;
 	}
 	
 	/**
@@ -131,5 +143,17 @@ public class DrinHostAdapter extends BaseAdapter {
 	@Override
 	public long getItemId(int position) {
 		return position;
+	}
+	
+	/**
+	 * ViewHolder class to hold row view of the layout
+	 * 
+	 * @author giorgio
+	 *
+	 */
+	static class ViewHolder {
+		TextView  serverNameLine;
+		TextView  serverIPLine;
+		ImageView iconPaired;
 	}
 }

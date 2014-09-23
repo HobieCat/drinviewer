@@ -87,6 +87,8 @@ public class DrinViewerBroadcastReceiver extends WakefulBroadcastReceiver {
 	    }
 	    else if (intent.getAction().equals(context.getResources().getString(R.string.broadcast_startdiscovery)) || 
 	    		 intent.getAction().equals(context.getResources().getString(R.string.broadcast_cleanhostcollection))) {
+	    	
+	    	boolean startService = true;
 	    	/**
 	    	 * Calls the DiscoverServerService asking to do a discovery
 	    	 * or a clean host collection by simply forwarding the received action
@@ -98,11 +100,12 @@ public class DrinViewerBroadcastReceiver extends WakefulBroadcastReceiver {
     			
     			ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
     	    	NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-	    		wifiBroadcastAddress = (mWifi.isConnected()) ? getWiFiBroadcastAddress(context) : null;	    					    			
+	    		wifiBroadcastAddress = (mWifi.isConnected()) ? getWiFiBroadcastAddress(context) : null;
+	    		startService = wifiBroadcastAddress != null;
     			service.putExtra("wifiBroadcastAddress", wifiBroadcastAddress);
     		}
     		
-    		startWakefulService(context, service);
+    		if (startService) startWakefulService(context, service);
     		
     		if (intent.getBooleanExtra("stopservice", false)) {
     			context.stopService(service);

@@ -66,15 +66,6 @@ public class DiscoverServer implements Runnable {
 	private String wifiBroadcastAddress;
 	
 	/**
-	 * timeout to set when discovering, as follows:
-	 * - start from Constants.DISCOVER_TIMEOUT
-	 * - if the timeout is reached, double it for the next packet
-	 * - if a packet is received, reset it to Constants.DISCOVER_TIMEOUT
-	 * - if the timeout exceeds DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT stop discovering
-	 */	
-	private int currentTimeOut;
-	
-	/**
 	 * constructor, just sets the serverCollection
 	 * 
 	 * @param serverCollection the HostCollection object to be filled
@@ -83,7 +74,6 @@ public class DiscoverServer implements Runnable {
 	public DiscoverServer(DrinHostCollection serverCollection) {
 		this.serverCollection = serverCollection;
 		this.wifiBroadcastAddress = Constants.BROADCAST_ADDRESS;
-		this.currentTimeOut = Constants.DISCOVER_TIMEOUT;
 	}
 
 	/**
@@ -108,43 +98,24 @@ public class DiscoverServer implements Runnable {
 				
 				running = uuid!=null;
 				
-				int loopNumber = 1;
-				boolean packetSentInThisLoop = false;
-				
 				if (running) {
-					recvBuf = new byte[Constants.BUFLEN];				
+					recvBuf = new byte[Constants.BUFLEN];
+					socket.send(sendPacket);
 				}
+				
+				long startTime = System.currentTimeMillis();
 				
 				while (running) {
 					try {
-						// send the broadcast out if needed
-						if (!packetSentInThisLoop) {
-							socket.send(sendPacket);
-							packetSentInThisLoop = true;
-							// print a message to the user
-//							System.out.println(getClass().getName()+">>> Request packet sent to: " + wifiBroadcastAddress);
-						}
-						
 						// setup stuff and wait for a response
 						if (recvBuf!=null) {
 							if (receivePacket==null) receivePacket = new DatagramPacket(recvBuf, recvBuf.length);
 							else receivePacket.setData(recvBuf);
 //							System.out.println(getClass().getName()+">>> Setting timeout to: " + currentTimeOut);
-							// if for some reason the currentTimeOut becomes too big, terminate
-							if (currentTimeOut > DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT) {
-								terminate();
-								break;
-							}
-							socket.setSoTimeout(currentTimeOut);
+							socket.setSoTimeout(DroidDrinViewerConstants.DISCOVER_TIMEOUT);
 //							System.out.println(getClass().getName()+">>> loop:"+loopNumber+" Waiting for a packet...");
 							socket.receive(receivePacket);
 						}
-						
-						// we have a response here, since receive is blocking
-//						System.err.println(getClass().getName()+">>> ...got it! :)");
-						
-						// looks like network is responding, reset the socket timeout if it was increased
-						if (currentTimeOut > Constants.DISCOVER_TIMEOUT) currentTimeOut = Constants.DISCOVER_TIMEOUT;
 						
 						// extract the response to a string and check if it's what we'd expected
 						String message = new String(receivePacket.getData()).trim();
@@ -170,30 +141,23 @@ public class DiscoverServer implements Runnable {
 							if (!serverCollection.isInList(foundHost)) {
 //								System.err.println(getClass().getName()+">>> ADDING HOST");
 								serverCollection.put(foundHost);
-								loopNumber--;
 							}
 						  }
 					    
 					    message = null;
 					} catch (SocketTimeoutException e) {
-						// looks like network is slow on responding,
-						// increase the timeout for the next iterations
-							currentTimeOut += currentTimeOut;
-//							System.err.println(getClass().getName()+">>> NEW TIME OUT: "+currentTimeOut);
-					} finally {
-						if (loopNumber >= Constants.DISCOVERY_BROADCAST_COUNT) {
-							// print a message to the user
-//							System.err.println(getClass().getName()+">>> DONE DISCOVERY.");
-							// self terminate, sets running to false
-							terminate();
-						} else {
-							// send another broadcast and increase the loop counter
-							packetSentInThisLoop = false;
-							loopNumber++;
-						}
+						/**
+						 * should be safe to do nothing and keep waiting for
+						 * incoming packets until the below if terminates the thread
+						 */
+					}
+
+					// terminate after DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT millis 
+					if ((System.currentTimeMillis() - startTime) > DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT) {
+						terminate();
 					}
 				}
-				// we're terminating here and out of the while loop, close the socket and terminate
+				// we're terminating here and out of the while loop, close the socket
 				if (socket!=null) socket.close();
 			} catch (IOException e) {
 				e.printStackTrace();

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">DroidDrinViewer</string>
+    <string name="app_name">DrinViewer</string>
     <string name="refresh">Refresh List</string>
     <string name="unknownnametitle">Incoming Call</string>
     <string name="discover_server_servicename">DrinViewer Discovery Service</string>

@@ -172,7 +172,7 @@ public class ClientConnectionManager {
 					out.writeUTF(sendMessage + Constants.MESSAGE_CHAR_SEPARATOR + uuid);
 					out.flush();
 					// set a timeout
-					socket.setSoTimeout(Constants.PAIRING_TIMEOUT);
+					socket.setSoTimeout(DroidDrinViewerConstants.PAIRING_TIMEOUT);
 					// wait for a pairing request response message
 					if ((fromServer = in.readLine()) != null) {
 						if (fromServer.startsWith(expectedMessage)) {

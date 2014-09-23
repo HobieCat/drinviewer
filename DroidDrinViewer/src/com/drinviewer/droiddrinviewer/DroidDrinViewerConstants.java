@@ -52,4 +52,9 @@ public class DroidDrinViewerConstants extends Constants {
 	public static final long   DISCOVER_REPEAT_TIME = 1000 * 10 * 60;
 	// discover maximum timeout
 	public static final long   DISCOVERY_MAX_TIMEOUT = 30000; // 30 seconds
+	// timeout for the client DISCOVER phase. The client will keep waiting for responses for this amount of time	
+	public static final int    DISCOVER_TIMEOUT = 4000; // 04 seconds
+	// timeout when waiting for a pairing request response
+	public static final int	   PAIRING_TIMEOUT = 10000; // 10 seconds
+
 }

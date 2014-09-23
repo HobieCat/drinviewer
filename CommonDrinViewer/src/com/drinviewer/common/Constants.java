@@ -33,8 +33,6 @@ public class Constants {
 	
 	// default port for communication
 	public static final int    PORT=50001;
-	// how many time to run the test server application
-	public static final int    SECONDS_TO_RUN_SERVER = 600;
 	// default length of the buffer used for UDP communication while in DISCOVER phase
 	public static final int    BUFLEN = 150;
 	
@@ -42,8 +40,6 @@ public class Constants {
 	public static final String BROADCAST_ADDRESS = Constants.getFirstBroadcastAddressAsString();
 	// broadcast address for receiving UDP packets while in DISCOVER phase
 	public static final String ZERO_ADDRESS = "0.0.0.0";
-	// broadcast group
-	public static final String BROADCAST_GROUP = "230.0.0.1";
 	
 	// text message for initializing the DISCOVER protcol
 	public static final String DISCOVER_REQUEST = "DISCOVER";
@@ -71,14 +67,6 @@ public class Constants {
 	public static final String MESSAGE_OK = "OK";
 	// a generic ERROR message
 	public static final String MESSAGE_ERROR = "ERROR";
-	
-	// how many times to send out the broadcast during DISCOVERY phase.
-	public static final int    DISCOVERY_BROADCAST_COUNT = 3;
-	// timeout for the client DISCOVER phase. The client will keep waiting for responses for this amount of time
-	// single receive time out is: desired total timeout/number of time to send the broadcast	
-	public static final int    DISCOVER_TIMEOUT = 12*1000 / Constants.DISCOVERY_BROADCAST_COUNT; // 10 seconds
-	// timeout when waiting for a pairing request response
-	public static final int	   PAIRING_TIMEOUT = DISCOVER_TIMEOUT;
 	
 	// size of the popup icon longest side
 	public static final int    ICON_SIZE = 96;

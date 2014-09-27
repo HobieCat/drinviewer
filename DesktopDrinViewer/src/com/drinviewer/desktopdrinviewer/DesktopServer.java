@@ -132,6 +132,17 @@ public class DesktopServer {
 	}
 	
 	/**
+	 * sets the do not disturb mode on the broadcast listener,
+	 * to force it to not respond to broadcast request coming
+	 * from device that are unpaired
+	 * 
+	 * @param mode true to not respond
+	 */
+	public void setDoNotDisturbMode(boolean mode) {
+		broadcastListener.setDoNotDisturbMode(mode);
+	}
+	
+	/**
 	 * adds a listener for the custom IncomingDrin event
 	 * 
 	 * @param listener the IncomingDrinListener to be added

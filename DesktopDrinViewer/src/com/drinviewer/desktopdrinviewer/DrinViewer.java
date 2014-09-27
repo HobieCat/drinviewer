@@ -85,6 +85,7 @@ public class DrinViewer {
 		}
 		
 		boolean serverWasRunning = prefs.getBoolean(DesktopDrinViewerConstants.PREFS_SERVER, true);
+		boolean doNotDisturbMode = prefs.getBoolean(DesktopDrinViewerConstants.PREFS_DONOTDISTURB, false);
 		
 		Display.setAppName(Constants.APPNAME);
 		Display.setAppVersion(Constants.APPVERSION);		
@@ -206,10 +207,11 @@ public class DrinViewer {
 			});
 
 			/**
-			 *  start server and stop server menu item definition
+			 *  start server, stop server and donotdisturb menu item definition
 			 */
 			final MenuItem startServer = new MenuItem(menu, SWT.PUSH);
 			final MenuItem stopServer = new MenuItem(menu, SWT.PUSH);
+			final MenuItem doNotDisturb = new MenuItem(menu, SWT.CHECK);
 			
 			/**
 			 * start server menu item implementation
@@ -256,6 +258,19 @@ public class DrinViewer {
 					item.setToolTipText(baseToolTipText+" - "+DesktopDrinViewerConstants.i18nMessages.getString("disabled"));
 					stopServer.setEnabled(false);
 					startServer.setEnabled(true);
+				}
+			});
+			
+			/**
+			 * do not disturb item implementation
+			 */
+			doNotDisturb.setText(DesktopDrinViewerConstants.i18nMessages.getString("donotdisturb"));
+			doNotDisturb.setSelection(doNotDisturbMode);
+			doNotDisturb.addListener(SWT.Selection, new Listener() {
+				@Override
+				public void handleEvent(Event event) {
+					prefs.putBoolean(DesktopDrinViewerConstants.PREFS_DONOTDISTURB, doNotDisturb.getSelection());
+					ds.setDoNotDisturbMode(doNotDisturb.getSelection());
 				}
 			});
 			

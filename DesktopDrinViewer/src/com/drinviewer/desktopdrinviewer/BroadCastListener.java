@@ -66,6 +66,13 @@ public class BroadCastListener implements Runnable {
 	private String localHostName = null;
 
 	/**
+	 * do not disturb mode: if true, the class will not
+	 * respond to broadcast request coming from unpaired devices
+	 * 
+	 */
+	private boolean doNotDisturbMode = false;
+
+	/**
 	 * Class constructor:
 	 * 
 	 * gets the local host name only once, and will be 
@@ -173,8 +180,11 @@ public class BroadCastListener implements Runnable {
 			        	// prepare the message to send out
 			        	String sendMessage = Constants.DISCOVER_RESPONSE;
 			        	
+			        	// get paired state for receivedUUID
+			        	boolean isPaired = new ServerDBManager().isPaired( new HostData(receivedUUID, packet.getAddress().getHostAddress()));
+			        	
 			        	// check if the receivedUUID owns to a paired device
-						if (receivedUUID!=null && new ServerDBManager().isPaired( new HostData(receivedUUID, packet.getAddress().getHostAddress()))) {
+						if (receivedUUID!=null && isPaired) {
 							sendMessage += Constants.MESSAGE_CHAR_SEPARATOR+Constants.MESSAGE_DEVICE_IS_PAIRED;
 						} else {
 							sendMessage += Constants.MESSAGE_CHAR_SEPARATOR+Constants.MESSAGE_DEVICE_IS_UNPAIRED;
@@ -191,7 +201,13 @@ public class BroadCastListener implements Runnable {
 			            // send out the response
 			            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, packet.getAddress(), packet.getPort());
 			            try {
-			            	socket.send(sendPacket);
+			            	/**
+			            	 * send out response packet only if doNotDisturb mode is
+			            	 * false or if it is true and the device was already paired
+			            	 */
+			            	if (!isDoNotDisturbMode() || (isDoNotDisturbMode() && isPaired)) {
+			            		socket.send(sendPacket);
+			            	}			            	
 			            	// print a message to the user
 			            	// System.out.println(this.getClass().getName() + ">>>Sent packet to: " + sendPacket.getAddress().getHostAddress());
 			            } catch (IOException e) {
@@ -235,6 +251,20 @@ public class BroadCastListener implements Runnable {
 	 */
 	public static BroadCastListener getInstance() {
 		return listenerThreadHolder.INSTANCE;
+	}
+
+	/**
+	 * @return the doNotDisturbMode
+	 */
+	public boolean isDoNotDisturbMode() {
+		return doNotDisturbMode;
+	}
+
+	/**
+	 * @param doNotDisturbMode the doNotDisturbMode to set
+	 */
+	public void setDoNotDisturbMode(boolean doNotDisturbMode) {
+		this.doNotDisturbMode = doNotDisturbMode;
 	}
 
 	/**

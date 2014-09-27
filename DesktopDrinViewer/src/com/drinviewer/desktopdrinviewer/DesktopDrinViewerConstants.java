@@ -47,6 +47,8 @@ public class DesktopDrinViewerConstants extends Constants {
 	 public static final String PREFS_TEXTFONTNAME = "TextFontName";
 	 public static final String PREFS_TEXTFONTSIZE = "TextFontSize";
 	 public static final String PREFS_TEXTFONTSTYLE = "TextFontStyle";
+	 // preferences string to tell if donotditrub mode is on or off
+	 public static final String PREFS_DONOTDISTURB = "donotdisturb";
 	 
 	 public static String getAppSaveDir()
 	 {

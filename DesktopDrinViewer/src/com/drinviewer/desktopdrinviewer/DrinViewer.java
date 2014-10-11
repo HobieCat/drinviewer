@@ -90,7 +90,7 @@ public class DrinViewer {
 		Display.setAppName(Constants.APPNAME);
 		Display.setAppVersion(Constants.APPVERSION);		
 		
-		this.display = new Display();
+		this.display = Display.getDefault();
 		this.shell = new Shell(display);
 		final Menu menu = new Menu(shell, SWT.POP_UP);
 
@@ -266,6 +266,7 @@ public class DrinViewer {
 			 */
 			doNotDisturb.setText(DesktopDrinViewerConstants.i18nMessages.getString("donotdisturb"));
 			doNotDisturb.setSelection(doNotDisturbMode);
+			ds.setDoNotDisturbMode(doNotDisturb.getSelection());
 			doNotDisturb.addListener(SWT.Selection, new Listener() {
 				@Override
 				public void handleEvent(Event event) {
@@ -301,6 +302,19 @@ public class DrinViewer {
 					    			DesktopDrinViewerConstants.i18nMessages.getString("popuptext"), null);
 					    }
 					});
+				}
+			});
+			
+			/**
+			 * settings/manage paired devices menu item
+			 */
+			MenuItem managePaired = new MenuItem(settingsSubMenu, SWT.PUSH);
+			managePaired.setText(DesktopDrinViewerConstants.i18nMessages.getString("managepaired"));
+			managePaired.addListener(SWT.Selection, new Listener() {
+				@Override
+				public void handleEvent(Event event) {
+					ManagePairedDialog mpd = new ManagePairedDialog(shell);
+					mpd.open();
 				}
 			});
 			
@@ -356,8 +370,21 @@ public class DrinViewer {
 				}
 			});
 			
-			// separator before exit menu item
+			// separator before website and exit menu item
 			new MenuItem(menu, SWT.SEPARATOR);
+			
+			/**
+			 * openwebsite menu item
+			 */
+			MenuItem openwebsite = new MenuItem(menu, SWT.PUSH);
+			openwebsite.setText(DesktopDrinViewerConstants.i18nMessages.getString("openwebsite"));
+			openwebsite.addListener(SWT.Selection, new Listener() {
+				@Override
+				public void handleEvent(Event event) {
+					org.eclipse.swt.program.Program.launch(Constants.APPURL);
+				}
+			});
+			
 			
 			/**
 			 * exit menu item

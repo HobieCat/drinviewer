@@ -20,9 +20,6 @@
 package com.drinviewer.droiddrinviewer;
 
 
-import java.util.Timer;
-import java.util.TimerTask;
-
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -39,6 +36,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.drinviewer.common.HostData;
@@ -158,23 +156,14 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 				doPairingToggle(position);
 			}
 		});
+		
+		// Display this installation generated UUID
+		((TextView) view.findViewById(R.id.deviceUUID)).setText(
+				getString(R.string.deviceUUIDlabel) + DrinViewerApplication.getInstallationUUID());
+		
 		// Sets fragment to be retained		
 		setRetainInstance(true);
 		return view;
-	}
-	
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-        /**
-         * Bind the DiscoverServerService if it is not, note that the onServiceConnected
-         * method will send a startdiscovery message to the DrinViewerBroadcastReceiver
-         * as soon as the service gets connected at startup
-         */
-		if (!isBound) {
-			Intent intent = new Intent(DiscoverServerService.class.getName());
-			isBound = mActivity.getApplication().bindService(intent, this, Context.BIND_AUTO_CREATE);
-		}
 	}
 	
 	/**
@@ -185,63 +174,61 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 		super.onResume();
 		mustUpdateUI = true;
 		
-		/**
-		 * delay the code to be executed by 500ms, hoping
-		 * it is enough for the service to receive the broadcast
-		 * sent in onCreate and to bind to the Application
-		 */	
-		new Timer().schedule(new TimerTask() {
-			@Override
-			public void run() {
-				try {
-					if (discoverServerApi != null) {
-						/**
-						 *  if the service is doing a discovery, just set the
-						 *  discoverServerProgress visibility to visible. 
-						 *  The service will call the listener when it has finished
-						 */
-						if (discoverServerApi.isRunning()) {
-							if (mActivity != null) {
-								mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_START);
-							}
-						} else {
-							/**
-							 * If the service is not doing a discovery,
-							 * ask him for the most up-to-date host collection
-							 * set it in the adapter and display it
-							 */
-								final DrinHostCollection newCollection = discoverServerApi.getMostUpToDateCollection();
-								if (mActivity != null) {
-									mActivity.runOnUiThread(new Runnable() {
-										@Override
-										public void run() {
-											if (newCollection != null) {
-												getAdapter().setHostCollection(newCollection);												
-											} else {
-												getAdapter().initHostCollection();
-											}	
-											getAdapter().notifyDataSetChanged();
-										}
-									});
-									/**
-									 * either the hostcollection has been set or voided,
-									 * turn off the discoverServerProgress
-									 */
-									mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_DONE);
-								}
-						}
-					} else {
-						/**
-						 * If there's no service connected, do nothing :(
-						 */
+		try {
+			if (discoverServerApi != null) {
+				/**
+				 *  if the service is doing a discovery, just set the
+				 *  discoverServerProgress visibility to visible. 
+				 *  The service will call the listener when it has finished
+				 */
+				if (discoverServerApi.isRunning()) {
+					if (mActivity != null) {
+						mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_START);
 					}
-				} catch (RemoteException e) {
-					// ignore
-					e.printStackTrace();
+				} else {
+					/**
+					 * If the service is not doing a discovery,
+					 * ask him for the most up-to-date host collection
+					 * set it in the adapter and display it
+					 */
+						final DrinHostCollection newCollection = discoverServerApi.getMostUpToDateCollection();
+						if (mActivity != null) {
+							mActivity.runOnUiThread(new Runnable() {
+								@Override
+								public void run() {
+									if (newCollection != null) {
+										getAdapter().setHostCollection(newCollection);												
+									} else {
+										getAdapter().initHostCollection();
+									}	
+									getAdapter().notifyDataSetChanged();
+								}
+							});
+							/**
+							 * either the hostcollection has been set or voided,
+							 * turn off the discoverServerProgress
+							 */
+							mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_DONE);
+						}
+				}
+			} else {
+		        /**
+		         * Bind the DiscoverServerService if it is not, note that the onServiceConnected
+		         * method will send a startdiscovery message to the DrinViewerBroadcastReceiver
+		         * as soon as the service gets connected at startup
+		         */
+				if (!isBound) {
+					Intent intent = new Intent(mActivity.getApplication(),DiscoverServerService.class);
+					intent.setAction(DiscoverServerService.class.getName());
+					isBound = mActivity.getApplication().bindService(intent, this, Context.BIND_AUTO_CREATE | Context.BIND_NOT_FOREGROUND);
 				}
 			}
-		}, 500);
+		} catch (RemoteException e) {
+			// ignore
+			e.printStackTrace();
+		}
 	}
+
 
 	/**
 	 * onAttach Fragment method
@@ -267,7 +254,16 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 	@Override
 	public void onPause() {
 		super.onPause();
-		mustUpdateUI = false;
+		try {
+			// tell the activity to hide the ProgressBar
+			if (mustUpdateUI && mActivity != null && discoverServerApi != null && discoverServerApi.isRunning()) {
+				mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_DONE);
+			}
+		} catch (RemoteException e) {
+			// ignore
+		} finally {
+			mustUpdateUI = false;
+		}		
 	}
 
 	/**
@@ -278,8 +274,10 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 		super.onDestroy();
 		try {
 			// remove the listener and unbind the DiscoverServerService
-			discoverServerApi.removeListener(hostUpdatedListener);
-			mActivity.getApplication().unbindService(this);
+			if (discoverServerApi!=null)
+				discoverServerApi.removeListener(hostUpdatedListener);
+			if (mActivity!=null)
+				mActivity.getApplication().unbindService(this);
 			isBound = false;
 		} catch (Throwable t) {
 			t.printStackTrace();
@@ -395,17 +393,30 @@ public class ServerListFragment extends Fragment implements ServiceConnection {
 		// that's how we get the client side of the IPC connection
 		if (discoverServerApi == null) {
 			discoverServerApi = DiscoverServerApi.Stub.asInterface(service);			
-	        /**
-	         *  sends a message to the DrinViewerBroadcastReceiver to start the discovery repeat
-	         *  this fires an immediate discovery, so there's no need to call the doDiscover method
-	         */			
-	        Intent i = new Intent(mActivity.getBaseContext(), DrinViewerBroadcastReceiver.class);
-	        i.setAction(getResources().getString(R.string.broadcast_startalarmrepeater));
-	        i.putExtra("forcegetbroadcast", true);
-	        mActivity.sendBroadcast(i);
-	        
+
 			try {
-				discoverServerApi.addListener(hostUpdatedListener);
+				if (discoverServerApi.isRunning()) {
+					/**
+					 *  if the service is doing a discovery, just set the
+					 *  discoverServerProgress visibility to visible. 
+					 *  The service will call the listener when it has finished
+					 */
+					if (mustUpdateUI && mActivity != null) {
+						mActivity.getMessageHandler().sendEmptyMessage(DroidDrinViewerConstants.MSG_DISCOVER_START);
+					}
+				} else {
+			        /**
+			         *  sends a message to the DrinViewerBroadcastReceiver to start the discovery repeat
+			         *  this fires an immediate discovery, so there's no need to call the doDiscover method
+			         */
+			        Intent i = new Intent(mActivity.getBaseContext(), DrinViewerBroadcastReceiver.class);
+			        i.setAction(getResources().getString(R.string.broadcast_startalarmrepeater));
+			        i.putExtra("forcegetbroadcast", true);
+			        mActivity.sendBroadcast(i);
+				}
+				
+		        discoverServerApi.addListener(hostUpdatedListener);
+				
 			} catch (RemoteException e) {
 				// ignore
 				e.printStackTrace();

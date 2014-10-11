@@ -29,6 +29,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
+import java.util.ArrayList;
 
 import com.drinviewer.common.HostData;
 
@@ -165,6 +166,39 @@ public class ServerDBManager {
 			System.err.println(e.getClass().getName() + ": " + e.getMessage());
 		}
 		return conn;
+	}
+	
+	/**
+	 * gets the list of devices present in the DB, that are PAIRED
+	 * 
+	 * @return the array list of strings containing the uuids
+	 */
+	public ArrayList<String> getPairedDevices() {
+		
+		ArrayList<String> uuidList = new ArrayList<String>();
+		
+		try {
+			c = getConnection();
+			
+			PreparedStatement prep = c.prepareStatement("SELECT uuid FROM hosts");
+			
+			ResultSet rs = prep.executeQuery();
+			
+			while (rs.next()) {
+				uuidList.add(rs.getString("uuid"));
+			}
+			
+			rs.close();
+			prep.close();
+			c.close();
+			
+		} catch (SQLException e) {
+			System.err.println(e.getClass().getName() + ": " + e.getMessage());
+			System.exit(-1);
+		}
+		
+		if (uuidList.size()>0) return uuidList;
+		else return null;		
 	}
 	
 	/**

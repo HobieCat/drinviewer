@@ -105,6 +105,13 @@ public class NotifierDialog {
 	}
     
     /**
+     * @return number of attached monitors
+     */
+    private int getMonitorCount() {
+    	return _display.getMonitors().length-1;
+    }
+    
+    /**
      * builds the popup to be displayed
      * 
      * @param title title of the popup
@@ -253,9 +260,16 @@ public class NotifierDialog {
      */
     private Point getPositionFromPrefs() {
     	Preferences prefs = DrinViewer.getPreferences();
+    	int x=-1, y=-1;
     	
-    	int x = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_X, -1);
-    	int y = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_Y, -1);
+    	x = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_X+getMonitorCount(), -1);
+    	y = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_Y+getMonitorCount(), -1);
+    	
+    	// if still no x and y, get default (aka primary) monitor ones
+    	if (x==-1 && y==-1) {
+        	x = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_X, -1);
+        	y = prefs.getInt(DesktopDrinViewerConstants.PREFS_POPUP_Y, -1);
+    	}
     	
     	if (x!=-1 && y!=-1) {
     		return new Point(x,y);
@@ -266,15 +280,17 @@ public class NotifierDialog {
 
     /**
      * sets the popup coordinates in the shared preferences
+     * @param popup 
      * 
      * @param position the point to set
      */
-    private void setPositionInPrefs(Point position) {
+    private void setPositionInPrefs(Shell popup, Point position) {
     	Preferences prefs = DrinViewer.getPreferences();
+    	
     	if (position.x < 0) position.x = 0;
     	if (position.y < 0) position.y = 0;
-    	prefs.putInt(DesktopDrinViewerConstants.PREFS_POPUP_X, position.x);
-    	prefs.putInt(DesktopDrinViewerConstants.PREFS_POPUP_Y, position.y);
+    	prefs.putInt(DesktopDrinViewerConstants.PREFS_POPUP_X+getMonitorCount(), position.x);
+    	prefs.putInt(DesktopDrinViewerConstants.PREFS_POPUP_Y+getMonitorCount(), position.y);
     	try {
 			prefs.flush();
 		} catch (BackingStoreException e) {
@@ -292,8 +308,8 @@ public class NotifierDialog {
     public void showToSetPosition (String title, String message, byte[] imageData) {
 		// get a popup
 		final Shell popup = buildPopUp(title, message, imageData);
-		// this popup always goes at bottom right of screen
-		Rectangle clientArea = _display.getClientArea();
+		// this popup goes at bottom right of primary monitor if no preferences
+		Rectangle clientArea = _display.getMonitors()[getMonitorCount()].getClientArea();
 		
         // set popup start coordinates
 		int startX;
@@ -328,7 +344,7 @@ public class NotifierDialog {
 					break;
 				case SWT.MouseDoubleClick:
 					Point p = _display.map(popup, null, e.x, e.y);
-					setPositionInPrefs(new Point(p.x - origin.x, p.y - origin.y));
+					setPositionInPrefs(popup, new Point(p.x - origin.x, p.y - origin.y));
 					popup.close();				
 					break;
 				}
@@ -378,8 +394,8 @@ public class NotifierDialog {
 		startY += (_activeShells.size() * popUpHeight);
         
         boolean forceMoveUp = false;
-        
-        // if the bottom of the popup will fall below the screen...
+
+        // if the bottom of the popup will fall outside the screen...
         // fix it so that it'll be fully visible
         if (startY + popUpHeight >= clientArea.height) {
         	if (!_activeShells.isEmpty()) {
@@ -394,7 +410,7 @@ public class NotifierDialog {
         	}
         }
         
-        // if the right of the popup will fall below the screen...
+        // if the right of the popup will fall outside the screen...
         // fix it so that it'll be fully visible
         if (startX + popUpWidth >= clientArea.width) {
         	startX = clientArea.x + clientArea.width - popUpWidth - 1;

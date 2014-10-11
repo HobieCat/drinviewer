@@ -21,6 +21,16 @@
         android:paddingLeft="@dimen/activity_horizontal_margin"
         android:paddingRight="@dimen/activity_horizontal_margin" />
 
+    <TextView
+        android:id="@+id/deviceUUID"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/serverListView"
+        android:layout_alignParentBottom="true"
+        android:paddingBottom="@dimen/deviceUUID_vertical_margin"
+        android:gravity="center"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
     <ProgressBar
         android:id="@+id/discoverServerProgress"
         style="?android:attr/progressBarStyleHorizontal"

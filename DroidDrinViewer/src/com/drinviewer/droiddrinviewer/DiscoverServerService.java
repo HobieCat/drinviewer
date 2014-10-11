@@ -55,7 +55,15 @@ public class DiscoverServerService extends Service {
 	 */
 	private boolean isRunning = false;
 	
+	/**
+	 * the wifi broadcast address
+	 */
 	private String wifiBroadcastAddress = null;
+	
+	/**
+	 * DiscoverServer Runnable to be put into a thread
+	 */
+	private DiscoverServer ds = null;
 	
 	private DiscoverServerApi.Stub discoverAPI = new DiscoverServerApi.Stub() {
 
@@ -90,6 +98,11 @@ public class DiscoverServerService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		if (intent.getAction()!=null) {
+			if (ds==null) {
+				ds = new DiscoverServer(hostCollection);
+				ds.setUUID(DrinViewerApplication.getInstallationUUID());
+			}
+			
 			if (intent.getAction().equals(getResources().getString(R.string.broadcast_startdiscovery))) {
 				// get the wifiBroadcastAddress from intent extra
 				wifiBroadcastAddress = null;
@@ -119,6 +132,11 @@ public class DiscoverServerService extends Service {
 				 * Sends a host init event to all listeners
 				 */
 				sendBroadcastToListeners(DroidDrinViewerConstants.COLLECTION_INIT);
+				if (isRunning) {
+					isRunning = false;
+					sendBroadcastToListeners(DroidDrinViewerConstants.DISCOVERY_DONE);
+					ds.terminate();					
+				}
 			}
 		}
 		DrinViewerBroadcastReceiver.completeWakefulIntent(intent);
@@ -134,15 +152,13 @@ public class DiscoverServerService extends Service {
 			sendBroadcastToListeners(DroidDrinViewerConstants.DISCOVERY_STARTED);
 			
 			hostCollection.init();
-			
-			DiscoverServer ds = new DiscoverServer(hostCollection);
-			ds.setUUID(DrinViewerApplication.getInstallationUUID());
-			
+
 			if (wifiBroadcastAddress != null) ds.setBroadcastAddress (wifiBroadcastAddress);
 
 			synchronized (discoverLock) {
 				// start the discoverServer thread
-				new Thread(ds).start();
+				Thread dsThread = new Thread(ds);
+				dsThread.start();
 				/**
 				 * following called methods:
 				 * - isProducerRunning
@@ -157,6 +173,7 @@ public class DiscoverServerService extends Service {
 					 */
 					if (hs!=null) sendBroadcastToListeners(DroidDrinViewerConstants.HOST_DISCOVERED, hs);
 				}
+				dsThread.join();
 			}
 			/**
 			 * Sends a discovery done event to all listeners

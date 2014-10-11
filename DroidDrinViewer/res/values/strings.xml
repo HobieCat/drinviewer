@@ -3,7 +3,9 @@
 
     <string name="app_name">DrinViewer</string>
     <string name="refresh">Refresh List</string>
+    <string name="openwebsite">DrinViewer website</string>
     <string name="unknownnametitle">Incoming Call</string>
+    <string name="deviceUUIDlabel">ID: </string>
     <string name="discover_server_servicename">DrinViewer Discovery Service</string>
     <string name="broadcast_startdiscovery">com.drinviewer.droiddrinviewer.startdiscovery</string>
     <string name="broadcast_cleanhostcollection">com.drinviewer.droiddrinviewer.cleanhostcollection</string>

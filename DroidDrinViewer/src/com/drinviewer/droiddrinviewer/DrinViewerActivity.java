@@ -22,7 +22,11 @@ package com.drinviewer.droiddrinviewer;
 
 import java.lang.ref.WeakReference;
 
+import com.drinviewer.common.Constants;
+
 import android.support.v4.app.FragmentActivity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -66,6 +70,10 @@ public class DrinViewerActivity extends FragmentActivity {
 		case R.id.menu_refresh:
 			ServerListFragment slFragment = (ServerListFragment) getSupportFragmentManager().findFragmentById(R.id.serverlistfragment);
  			slFragment.doDiscover();
+			return true;
+		case R.id.menu_openwebsite:
+			Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(Constants.APPURL));
+			startActivity(browserIntent);
 			return true;
 		default:
 			return super.onOptionsItemSelected(item);

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="refresh">Aggiorna Elenco</string>
+    <string name="openwebsite">Sito di DrinViewer</string>
+    <string name="unknownnametitle">Chiamata in arrivo</string>
+
+    <!-- ACRA strings -->
+    <string name="crash_toast_text">Ooooops ! Sono andato in crash, per favore controlla e manda l\'email al mio sviluppatore per aiutarlo a risolvere il problema!</string>
+	<!-- end ACRA strings -->
+
+</resources>

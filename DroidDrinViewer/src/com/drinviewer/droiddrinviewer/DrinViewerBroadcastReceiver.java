@@ -131,6 +131,7 @@ public class DrinViewerBroadcastReceiver extends WakefulBroadcastReceiver {
 	    	 *  stop the alarm repeater. period.
 	    	 *  used by DrinViewerApplication.onTerminate method
 	    	 */
+	    	wifiBroadcastAddress = null;
 	    	stopAlarmRepeater(context);
 	    }
 	}

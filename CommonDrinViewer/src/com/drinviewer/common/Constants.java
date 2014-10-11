@@ -30,6 +30,8 @@ public class Constants {
 	public static final String APPNAME = "DrinViewer";
 	// application version number
 	public static final String APPVERSION = "1.0.0";
+	// application web site URL
+	public static final String APPURL = "http://hobiecat.github.io/drinviewer/";
 	
 	// default port for communication
 	public static final int    PORT=50001;

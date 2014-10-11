@@ -150,11 +150,12 @@ public class DiscoverServer implements Runnable {
 						 * should be safe to do nothing and keep waiting for
 						 * incoming packets until the below if terminates the thread
 						 */
-					}
-
-					// terminate after DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT millis 
-					if ((System.currentTimeMillis() - startTime) > DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT) {
-						terminate();
+						socket.send(sendPacket);
+					} finally {
+						// terminate after DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT millis 
+						if ((System.currentTimeMillis() - startTime) > DroidDrinViewerConstants.DISCOVERY_MAX_TIMEOUT) {
+							terminate();						
+						}
 					}
 				}
 				// we're terminating here and out of the while loop, close the socket
